@@ -19,6 +19,10 @@ public class NewsLink {
 
     private Integer minLevel;
 
+    private String name;
+
+    private String lang;
+
     private Date createTime;
 
     private Date updateTime;

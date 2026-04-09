@@ -1,0 +1,174 @@
+package com.archer.task.manager.service.impl;
+
+import com.archer.task.entity.CssSelectorLinkRelation;
+import com.archer.task.entity.NewsLink;
+import com.archer.task.entity.TaskLog;
+import com.archer.task.manager.service.NewsLinkManagerService;
+import com.archer.task.mapper.CssSelectorLinkRelationMapper;
+import com.archer.task.mapper.NewsLinkMapper;
+import com.archer.task.mapper.TaskLogMapper;
+import com.archer.task.service.SingleNewsTaskService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
+
+import java.util.Date;
+import java.util.List;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, NewsLink> implements NewsLinkManagerService {
+
+    private final NewsLinkMapper newsLinkMapper;
+    private final TaskLogMapper taskLogMapper;
+    private final CssSelectorLinkRelationMapper cssSelectorLinkRelationMapper;
+    private final SingleNewsTaskService singleNewsTaskService;
+
+    @Override
+    public Page<NewsLink> pageNewsLinks(String keyword, List<String> langs, Integer page, Integer size) {
+        Page<NewsLink> pageParam = new Page<>(page == null ? 1 : page, size == null ? 10 : size);
+        LambdaQueryWrapper<NewsLink> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(NewsLink::getIsDelete, "N");
+
+        if (StringUtils.hasText(keyword)) {
+            queryWrapper.and(wrapper -> wrapper
+                    .like(NewsLink::getUrl, keyword)
+                    .or()
+                    .like(NewsLink::getName, keyword));
+        }
+
+        if (!CollectionUtils.isEmpty(langs)) {
+            queryWrapper.in(NewsLink::getLang, langs);
+        }
+
+        queryWrapper.orderByDesc(NewsLink::getCreateTime);
+
+        return newsLinkMapper.selectPage(pageParam, queryWrapper);
+    }
+
+    @Override
+    public List<String> getAllLanguages() {
+        LambdaQueryWrapper<NewsLink> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.select(NewsLink::getLang)
+                   .eq(NewsLink::getIsDelete, "N")
+                   .isNotNull(NewsLink::getLang)
+                   .groupBy(NewsLink::getLang);
+        List<NewsLink> newsLinks = newsLinkMapper.selectList(queryWrapper);
+        return newsLinks.stream()
+                       .map(NewsLink::getLang)
+                       .distinct()
+                       .toList();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean updateNewsLink(NewsLink newsLink) {
+        if (newsLink.getId() == null) {
+            return false;
+        }
+        newsLink.setUpdateTime(new Date());
+        return newsLinkMapper.updateById(newsLink) > 0;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteNewsLink(Long id) {
+        NewsLink newsLink = newsLinkMapper.selectById(id);
+        if (newsLink == null) {
+            return false;
+        }
+        newsLink.setIsDelete("Y");
+        newsLink.setUpdateTime(new Date());
+        return newsLinkMapper.updateById(newsLink) > 0;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean startSingleTask(String url) {
+        try {
+            TaskLog taskLog = new TaskLog();
+            taskLog.setTaskType("SINGLE_MANUAL");
+            taskLog.setIsDelete("N");
+            taskLog.setCreateTime(new Date());
+            taskLog.setUpdateTime(new Date());
+            taskLogMapper.insert(taskLog);
+
+            Long taskId = taskLog.getId();
+
+            new Thread(() -> {
+                try {
+                    singleNewsTaskService.executeTask(url, taskId);
+                } catch (Exception e) {
+                    log.error("Failed to execute single task for url: {}", url, e);
+                }
+            }).start();
+
+            return true;
+        } catch (Exception e) {
+            log.error("Failed to start single task for url: {}", url, e);
+            return false;
+        }
+    }
+
+    @Override
+    public Page<TaskLog> pageTaskLogsByUrl(String url, Integer page, Integer size) {
+        Page<TaskLog> pageParam = new Page<>(page == null ? 1 : page, size == null ? 10 : size);
+        LambdaQueryWrapper<TaskLog> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(TaskLog::getIsDelete, "N")
+                   .orderByDesc(TaskLog::getCreateTime);
+        return taskLogMapper.selectPage(pageParam, queryWrapper);
+    }
+
+    @Override
+    public Page<CssSelectorLinkRelation> pageCssSelectorsByUrl(String url, Integer page, Integer size) {
+        Page<CssSelectorLinkRelation> pageParam = new Page<>(page == null ? 1 : page, size == null ? 10 : size);
+        LambdaQueryWrapper<CssSelectorLinkRelation> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(CssSelectorLinkRelation::getUrl, url)
+                   .eq(CssSelectorLinkRelation::getIsDelete, "N")
+                   .orderByDesc(CssSelectorLinkRelation::getCreateTime);
+        return cssSelectorLinkRelationMapper.selectPage(pageParam, queryWrapper);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean addCssSelector(String url, String cssSelector) {
+        CssSelectorLinkRelation relation = new CssSelectorLinkRelation();
+        relation.setUrl(url);
+        relation.setCssSelector(cssSelector);
+        relation.setIsDelete("N");
+        relation.setCreateTime(new Date());
+        relation.setUpdateTime(new Date());
+        return cssSelectorLinkRelationMapper.insert(relation) > 0;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean updateCssSelector(Long id, String cssSelector) {
+        CssSelectorLinkRelation relation = cssSelectorLinkRelationMapper.selectById(id);
+        if (relation == null) {
+            return false;
+        }
+        relation.setCssSelector(cssSelector);
+        relation.setUpdateTime(new Date());
+        return cssSelectorLinkRelationMapper.updateById(relation) > 0;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteCssSelector(Long id) {
+        CssSelectorLinkRelation relation = cssSelectorLinkRelationMapper.selectById(id);
+        if (relation == null) {
+            return false;
+        }
+        relation.setIsDelete("Y");
+        relation.setUpdateTime(new Date());
+        return cssSelectorLinkRelationMapper.updateById(relation) > 0;
+    }
+}

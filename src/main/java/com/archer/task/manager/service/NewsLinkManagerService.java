@@ -1,0 +1,31 @@
+package com.archer.task.manager.service;
+
+import com.archer.task.entity.NewsLink;
+import com.archer.task.entity.TaskLog;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.IService;
+
+import java.util.List;
+
+public interface NewsLinkManagerService extends IService<NewsLink> {
+
+    Page<NewsLink> pageNewsLinks(String keyword, List<String> langs, Integer page, Integer size);
+
+    List<String> getAllLanguages();
+
+    boolean updateNewsLink(NewsLink newsLink);
+
+    boolean deleteNewsLink(Long id);
+
+    boolean startSingleTask(String url);
+
+    Page<TaskLog> pageTaskLogsByUrl(String url, Integer page, Integer size);
+
+    Page<com.archer.task.entity.CssSelectorLinkRelation> pageCssSelectorsByUrl(String url, Integer page, Integer size);
+
+    boolean addCssSelector(String url, String cssSelector);
+
+    boolean updateCssSelector(Long id, String cssSelector);
+
+    boolean deleteCssSelector(Long id);
+}

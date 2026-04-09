@@ -31,11 +31,14 @@ public class SingleNewsTaskService implements Runnable {
 
     private final CountDownLatch countDownLatch;
 
-    public SingleNewsTaskService(NewsLink newsLink, LatestSpiderTaskServiceImpl latestSpiderTaskService, List<String> ruleList, NewsMapper newsMapper, CountDownLatch countDownLatch) {
+    private final Long taskId;
+
+    public SingleNewsTaskService(NewsLink newsLink, LatestSpiderTaskServiceImpl latestSpiderTaskService, List<String> ruleList, NewsMapper newsMapper, Long taskId, CountDownLatch countDownLatch) {
         this.newsLink = newsLink;
         this.latestSpiderTaskService = latestSpiderTaskService;
         this.ruleList = ruleList;
         this.newsMapper = newsMapper;
+        this.taskId = taskId;
         this.countDownLatch = countDownLatch;
     }
 
@@ -73,6 +76,7 @@ public class SingleNewsTaskService implements Runnable {
         news.setCreateTime(new Date());
         news.setUpdateTime(new Date());
         news.setSourceUrl(newsLink.getUrl());
+        news.setTaskId(taskId);
         news.setStatus(NewsStatusEnum.SPIDER_SUCCESS.name());
         return news;
     }

@@ -2,12 +2,10 @@ package com.archer.task.service.impl;
 
 import com.archer.task.constant.RuleTypeEnum;
 import com.archer.task.entity.*;
-import com.archer.task.mapper.MatchRuleMapper;
-import com.archer.task.mapper.NewsLinkMapper;
-import com.archer.task.mapper.NewsMapper;
-import com.archer.task.mapper.RssLinkMapper;
+import com.archer.task.mapper.*;
 import com.archer.task.service.SingleNewsTaskService;
 import com.archer.task.service.SingleRssTaskService;
+import com.archer.task.service.TaskLogService;
 import com.archer.task.service.TaskService;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import jakarta.annotation.Resource;
@@ -38,11 +36,17 @@ public class TaskServiceImpl implements TaskService {
 
     private final BlockingQueue<Runnable> queue = new LinkedBlockingQueue<>();
 
+    @Resource
+    private TaskLogService taskLogService;
+
     private final ThreadPoolExecutor threadPool = new ThreadPoolExecutor(4, 8, 60, TimeUnit.SECONDS, queue, new BasicThreadFactory.Builder().namingPattern("spider-%d").build());
 
     @Override
     public void startTask() {
         try {
+            TaskLog taskLog = new TaskLog();
+            taskLog.setTaskType("自动任务");
+            taskLogService.save(taskLog);
             QueryWrapper<RssLink> rssLinkQuery = new QueryWrapper<>();
             rssLinkQuery.eq("is_delete", "N");
             List<RssLink> rssLinks = rssLinkMapper.selectList(rssLinkQuery);
@@ -58,8 +62,9 @@ public class TaskServiceImpl implements TaskService {
                 SingleRssTaskService task = new SingleRssTaskService(rssLink, startDate, current, new LatestSpiderTaskServiceImpl(), newsMapper, countDownLatch);
                 threadPool.execute(task);
             }
+
             for (NewsLink newsLink : newsLinks) {
-                SingleNewsTaskService task = new SingleNewsTaskService(newsLink, new LatestSpiderTaskServiceImpl(), ruleList, newsMapper, countDownLatch);
+                SingleNewsTaskService task = new SingleNewsTaskService(newsLink, new LatestSpiderTaskServiceImpl(), ruleList, newsMapper, taskLog.getId(), countDownLatch);
                 threadPool.execute(task);
             }
             countDownLatch.await();

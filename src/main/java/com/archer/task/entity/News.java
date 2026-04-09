@@ -30,6 +30,8 @@ public class News {
     // 来源url 新闻页或者rss的feed页
     private String sourceUrl;
 
+    private Long taskId;
+
     private String isDelete;
 
     private Date publishTime;
