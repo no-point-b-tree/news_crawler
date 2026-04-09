@@ -1,85 +1,131 @@
 <template>
   <div class="news-link-list">
-    <el-card class="search-card">
-      <el-form :model="searchParams" inline>
-        <el-form-item label="关键词">
-          <el-input
-            v-model="searchParams.keyword"
-            placeholder="请输入URL或名称"
-            clearable
-            @keyup.enter="handleSearch"
-          />
-        </el-form-item>
-        <el-form-item label="语言">
-          <el-select
-            v-model="searchParams.langs"
-            multiple
-            placeholder="请选择语言"
-            clearable
-            style="width: 200px"
-          >
-            <el-option
-              v-for="lang in languages"
-              :key="lang"
-              :label="lang"
-              :value="lang"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">查询</el-button>
-          <el-button @click="handleReset">重置</el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
+    <el-container class="container">
+      <el-main>
+        <el-row :gutter="20">
+          <el-col :span="24">
+            <el-card class="search-card">
+              <el-form :model="searchParams" :inline="true" class="search-form">
+                <el-row :gutter="20" style="width: 100%">
+                  <el-col :xs="24" :sm="12" :md="8" :lg="6">
+                    <el-form-item label="关键词">
+                      <el-input
+                        v-model="searchParams.keyword"
+                        placeholder="请输入URL或名称"
+                        clearable
+                        @keyup.enter="handleSearch"
+                      />
+                    </el-form-item>
+                  </el-col>
+                  <el-col :xs="24" :sm="12" :md="8" :lg="6">
+                    <el-form-item label="语言">
+                      <el-select
+                        v-model="searchParams.langs"
+                        multiple
+                        placeholder="请选择语言"
+                        clearable
+                        style="width: 100%"
+                      >
+                        <el-option
+                          v-for="lang in languages"
+                          :key="lang"
+                          :label="lang"
+                          :value="lang"
+                        />
+                      </el-select>
+                    </el-form-item>
+                  </el-col>
+                  <el-col :xs="24" :sm="24" :md="8" :lg="12">
+                    <el-form-item>
+                      <el-button type="primary" @click="handleSearch">查询</el-button>
+                      <el-button @click="handleReset">重置</el-button>
+                    </el-form-item>
+                  </el-col>
+                </el-row>
+              </el-form>
+            </el-card>
+          </el-col>
 
-    <el-card class="action-card">
-      <el-button type="primary" @click="handleAdd">新增</el-button>
-      <el-button type="danger" @click="handleBatchDelete" :disabled="selection.length === 0">
-        批量删除
-      </el-button>
-    </el-card>
+          <el-col :span="24">
+            <el-card class="action-card">
+              <el-button type="primary" @click="handleAdd">新增</el-button>
+              <el-button type="danger" @click="handleBatchDelete" :disabled="selection.length === 0">
+                批量删除
+              </el-button>
+            </el-card>
+          </el-col>
 
-    <el-card>
-      <el-table
-        :data="tableData"
-        v-loading="loading"
-        @selection-change="handleSelectionChange"
-        style="width: 100%"
-      >
+          <el-col :span="24">
+            <el-card>
+              <el-table
+                :data="tableData"
+                v-loading="loading"
+                @selection-change="handleSelectionChange"
+                style="width: 100%"
+                :flexible="true"
+              >
         <el-table-column type="selection" width="55" />
-        <el-table-column prop="name" label="名称" min-width="120" />
-        <el-table-column prop="url" label="URL" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="lang" label="语言" width="100" />
-        <el-table-column prop="domain" label="域名" width="150" />
-        <el-table-column prop="minLevel" label="最小等级" width="100" />
-        <el-table-column prop="createTime" label="创建时间" width="180">
+        <el-table-column prop="name" label="名称" min-width="120">
+          <template #default="{ row }">
+            <span class="text-truncate" :title="row.name">{{ truncateText(row.name, 20) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="url" label="URL" min-width="200">
+          <template #default="{ row }">
+            <el-link
+              :href="row.url"
+              target="_blank"
+              type="primary"
+              :title="row.url"
+              class="url-link"
+            >
+              {{ truncateText(row.url, 30) }}
+            </el-link>
+          </template>
+        </el-table-column>
+        <el-table-column prop="lang" label="语言" min-width="80" />
+        <el-table-column prop="domain" label="域名" min-width="100">
+          <template #default="{ row }">
+            <span class="text-truncate" :title="row.domain">{{ truncateText(row.domain, 15) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="minLevel" label="最小等级" min-width="90" />
+        <el-table-column prop="createTime" label="创建时间" min-width="140">
           <template #default="{ row }">
             {{ formatDate(row.createTime) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="250" fixed="right">
+        <el-table-column label="操作" min-width="280" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
-            <el-button type="success" size="small" @click="handleStartTask(row)">执行任务</el-button>
-            <el-button type="info" size="small" @click="handleViewCssSelectors(row)">CSS选择器</el-button>
-            <el-button type="danger" size="small" @click="handleDelete(row)">删除</el-button>
+            <div class="action-buttons">
+              <el-button type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
+              <el-button type="success" size="small" @click="handleStartTask(row)">执行任务</el-button>
+              <el-button type="info" size="small" @click="handleViewCssSelectors(row)">CSS选择器</el-button>
+              <el-button type="danger" size="small" @click="handleDelete(row)">删除</el-button>
+            </div>
           </template>
         </el-table-column>
-      </el-table>
+              </el-table>
 
-      <div class="pagination">
-        <el-pagination
-          v-model:current-page="pagination.current"
-          v-model:page-size="pagination.size"
-          :total="pagination.total"
-          :page-sizes="[10, 20, 50, 100]"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handlePageChange"
-        />
-      </div>
-    </el-card>
+              <div class="pagination" v-if="pagination.total > 0">
+                <el-pagination
+                  v-model:current-page="pagination.current"
+                  v-model:page-size="pagination.size"
+                  :total="pagination.total"
+                  :page-sizes="[10, 20, 50, 100]"
+                  layout="total, sizes, prev, pager, next, jumper"
+                  @size-change="handleSizeChange"
+                  @current-change="handlePageChange"
+                />
+              </div>
+              <div class="pagination" v-else>
+                <div class="no-data">暂无数据</div>
+              </div>
+            </el-card>
+          </el-col>
+        </el-row>
+      </el-main>
+    </el-container>
 
     <el-dialog
       v-model="cssSelectorDialog.visible"
@@ -182,9 +228,12 @@ const fetchData = async () => {
       page: pagination.current,
       size: pagination.size
     };
+    console.log('请求参数:', params);
     const res = await newsLinkApi.pageNewsLinks(params);
-    tableData.value = res.records;
-    pagination.total = res.total;
+    console.log('API响应:', res);
+    tableData.value = res.records || [];
+    pagination.total = res.total || 0;
+    console.log('分页数据:', { records: tableData.value.length, total: pagination.total });
   } catch (error) {
     console.error('获取数据失败:', error);
   } finally {
@@ -336,6 +385,12 @@ const handleCssSelectorSizeChange = (size) => {
   fetchCssSelectors();
 };
 
+const truncateText = (text, maxLength) => {
+  if (!text) return '';
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength) + '...';
+};
+
 const formatDate = (dateString) => {
   if (!dateString) return '';
   const date = new Date(dateString);
@@ -345,6 +400,17 @@ const formatDate = (dateString) => {
 
 <style scoped>
 .news-link-list {
+  min-height: 100vh;
+  background-color: #f5f5f5;
+}
+
+.container {
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.el-main {
   padding: 20px;
 }
 
@@ -352,19 +418,137 @@ const formatDate = (dateString) => {
   margin-bottom: 20px;
 }
 
+.search-form .el-form-item {
+  margin-bottom: 0;
+  width: 100%;
+}
+
+.search-form .el-input,
+.search-form .el-select {
+  width: 100%;
+}
+
 .action-card {
   margin-bottom: 20px;
 }
 
+.action-buttons {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .action-buttons {
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  
+  .action-buttons .el-button {
+    flex: 1;
+    min-width: 60px;
+  }
+}
+
 .pagination {
   margin-top: 20px;
+  padding: 15px 0;
   display: flex;
   justify-content: flex-end;
+  background-color: #fff;
+  border-top: 1px solid #ebeef5;
+  min-height: 60px;
+  align-items: center;
+}
+
+.pagination .no-data {
+  width: 100%;
+  text-align: center;
+  color: #909399;
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .pagination {
+    justify-content: center;
+    padding: 10px 0;
+  }
+  
+  .pagination .el-pagination {
+    flex-wrap: wrap;
+  }
 }
 
 .css-selector-dialog .css-selector-form {
   display: flex;
   align-items: center;
   margin-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+  .css-selector-dialog .css-selector-form {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  
+  .css-selector-dialog .css-selector-form .el-input {
+    width: 100% !important;
+    margin-right: 0 !important;
+  }
+}
+
+.text-truncate {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.url-link {
+  text-decoration: none;
+}
+
+.url-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 1200px) {
+.el-table {
+  font-size: 12px;
+}
+
+.el-table .el-button {
+  font-size: 12px;
+  padding: 5px 8px;
+}
+
+.el-table .el-table__header-wrapper .el-table__cell {
+  white-space: nowrap;
+}
+
+.el-table .el-table__body-wrapper .el-table__cell {
+  white-space: nowrap;
+}
+}
+
+@media (max-width: 992px) {
+  .el-main {
+    padding: 15px;
+  }
+}
+
+.el-row {
+  margin-bottom: 20px;
+}
+
+.el-col {
+  margin-bottom: 20px;
+}
+
+.el-card__body {
+  padding: 20px;
 }
 </style>
