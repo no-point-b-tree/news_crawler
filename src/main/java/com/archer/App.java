@@ -4,23 +4,18 @@ import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-import com.archer.task.service.LatestSpiderTaskService;
-
-import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 
 @SpringBootApplication
 @Slf4j
 @MapperScan("com.archer.**.mapper")
 public class App {
-	
-	@Resource
-	private LatestSpiderTaskService latestSpiderTaskService;
 
-	public static void main(String[] args) {
-		SpringApplication.run(App.class, args);
-	}
-	
+
+    public static void main(String[] args) {
+        SpringApplication.run(App.class, args);
+    }
+
 //	@PostConstruct
 //	public void init() {
 //		String url ="https://www.boe.es/";
@@ -30,5 +25,5 @@ public class App {
 //		log.info("newsPageList: {}",newsPageList);
 //		
 //	}
-	
+
 }

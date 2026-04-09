@@ -37,9 +37,6 @@ import jakarta.annotation.Resource;
 class AppTest {
 
     @Resource
-    private LatestSpiderTaskService latestSpiderTaskService;
-
-    @Resource
     private LinkManagerService linkManagerService;
 
     @Resource

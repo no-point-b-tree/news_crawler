@@ -1,5 +1,6 @@
 package com.archer.task.service;
 
+import com.archer.task.constant.NewsStatusEnum;
 import com.archer.task.entity.Article;
 import com.archer.task.entity.News;
 import com.archer.task.mapper.NewsMapper;
@@ -54,6 +55,8 @@ public class SingleRssTaskService implements Runnable {
                 news.setPublishTime(article.getPublishDate());
                 news.setCreateTime(new Date());
                 news.setUpdateTime(new Date());
+                news.setSourceUrl(rssUrl);
+                news.setStatus(NewsStatusEnum.SPIDER_SUCCESS.name());
                 newsMapper.insert(news);
             }
         } catch (Exception e) {

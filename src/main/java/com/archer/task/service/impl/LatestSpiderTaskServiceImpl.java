@@ -31,7 +31,6 @@ import com.microsoft.playwright.Response;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@Service
 public class LatestSpiderTaskServiceImpl implements LatestSpiderTaskService {
 
     private final Playwright playwright;

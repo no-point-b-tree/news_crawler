@@ -31,9 +31,6 @@ public class TaskServiceImpl implements TaskService {
     private NewsLinkMapper newsLinkMapper;
 
     @Resource
-    private LatestSpiderTaskServiceImpl latestSpiderTaskService;
-
-    @Resource
     private MatchRuleMapper matchRuleMapper;
 
     @Resource
@@ -58,11 +55,11 @@ public class TaskServiceImpl implements TaskService {
             Date startDate = DateUtils.addDays(current, -1);
             List<String> ruleList = getRuleList(Arrays.asList(startDate, current));
             for (String rssLink : rssLinkList) {
-                SingleRssTaskService task = new SingleRssTaskService(rssLink, startDate, current, latestSpiderTaskService, newsMapper, countDownLatch);
+                SingleRssTaskService task = new SingleRssTaskService(rssLink, startDate, current, new LatestSpiderTaskServiceImpl(), newsMapper, countDownLatch);
                 threadPool.execute(task);
             }
             for (NewsLink newsLink : newsLinks) {
-                SingleNewsTaskService task = new SingleNewsTaskService(newsLink, latestSpiderTaskService, ruleList, newsMapper, countDownLatch);
+                SingleNewsTaskService task = new SingleNewsTaskService(newsLink, new LatestSpiderTaskServiceImpl(), ruleList, newsMapper, countDownLatch);
                 threadPool.execute(task);
             }
             countDownLatch.await();

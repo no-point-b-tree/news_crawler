@@ -27,6 +27,9 @@ public class News {
 
     private String status;
 
+    // 来源url 新闻页或者rss的feed页
+    private String sourceUrl;
+
     private String isDelete;
 
     private Date publishTime;

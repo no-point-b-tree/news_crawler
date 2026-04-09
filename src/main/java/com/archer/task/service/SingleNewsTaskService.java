@@ -1,5 +1,6 @@
 package com.archer.task.service;
 
+import com.archer.task.constant.NewsStatusEnum;
 import com.archer.task.entity.Article;
 import com.archer.task.entity.Hyperlink;
 import com.archer.task.entity.News;
@@ -51,15 +52,7 @@ public class SingleNewsTaskService implements Runnable {
                 } catch (Exception e) {
                     article.setPublishDate(new Date());
                 }
-                News news = new News();
-                news.setTitle(article.getTitle());
-                news.setContent(article.getContent());
-                news.setUrl(article.getUrl());
-                news.setIsDelete("N");
-                news.setSource("news");
-                news.setPublishTime(article.getPublishDate());
-                news.setCreateTime(new Date());
-                news.setUpdateTime(new Date());
+                News news = getNews(article);
                 newsMapper.insert(news);
             }
         } catch (Exception e) {
@@ -67,6 +60,21 @@ public class SingleNewsTaskService implements Runnable {
         } finally {
             countDownLatch.countDown();
         }
+    }
+
+    private News getNews(Article article) {
+        News news = new News();
+        news.setTitle(article.getTitle());
+        news.setContent(article.getContent());
+        news.setUrl(article.getUrl());
+        news.setIsDelete("N");
+        news.setSource("news");
+        news.setPublishTime(article.getPublishDate());
+        news.setCreateTime(new Date());
+        news.setUpdateTime(new Date());
+        news.setSourceUrl(newsLink.getUrl());
+        news.setStatus(NewsStatusEnum.SPIDER_SUCCESS.name());
+        return news;
     }
 
 }
