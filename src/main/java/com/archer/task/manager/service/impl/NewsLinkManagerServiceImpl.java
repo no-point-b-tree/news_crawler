@@ -6,13 +6,19 @@ import com.archer.task.entity.TaskLog;
 import com.archer.task.manager.service.NewsLinkManagerService;
 import com.archer.task.mapper.CssSelectorLinkRelationMapper;
 import com.archer.task.mapper.NewsLinkMapper;
+import com.archer.task.mapper.NewsMapper;
 import com.archer.task.mapper.TaskLogMapper;
+import com.archer.task.service.CssSelectorLinkRelationService;
 import com.archer.task.service.SingleNewsTaskService;
+import com.archer.task.service.TaskService;
+import com.archer.task.service.impl.LatestSpiderTaskServiceImpl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.time.DateUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -20,16 +26,29 @@ import org.springframework.util.StringUtils;
 
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, NewsLink> implements NewsLinkManagerService {
 
-    private final NewsLinkMapper newsLinkMapper;
-    private final TaskLogMapper taskLogMapper;
-    private final CssSelectorLinkRelationMapper cssSelectorLinkRelationMapper;
-    private final SingleNewsTaskService singleNewsTaskService;
+    @Resource
+    private NewsLinkMapper newsLinkMapper;
+
+    @Resource
+    private TaskLogMapper taskLogMapper;
+
+    @Resource
+    private CssSelectorLinkRelationMapper cssSelectorLinkRelationMapper;
+
+    @Resource
+    private TaskService taskService;
+
+    @Resource
+    private CssSelectorLinkRelationService cssSelectorLinkRelationService;
+
+    @Resource
+    private NewsMapper newsMapper;
 
     @Override
     public Page<NewsLink> pageNewsLinks(String keyword, List<String> langs, Integer page, Integer size) {
@@ -57,14 +76,14 @@ public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, News
     public List<String> getAllLanguages() {
         LambdaQueryWrapper<NewsLink> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.select(NewsLink::getLang)
-                   .eq(NewsLink::getIsDelete, "N")
-                   .isNotNull(NewsLink::getLang)
-                   .groupBy(NewsLink::getLang);
+                .eq(NewsLink::getIsDelete, "N")
+                .isNotNull(NewsLink::getLang)
+                .groupBy(NewsLink::getLang);
         List<NewsLink> newsLinks = newsLinkMapper.selectList(queryWrapper);
         return newsLinks.stream()
-                       .map(NewsLink::getLang)
-                       .distinct()
-                       .toList();
+                .map(NewsLink::getLang)
+                .distinct()
+                .toList();
     }
 
     @Override
@@ -99,17 +118,18 @@ public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, News
             taskLog.setCreateTime(new Date());
             taskLog.setUpdateTime(new Date());
             taskLogMapper.insert(taskLog);
-
             Long taskId = taskLog.getId();
-
-            new Thread(() -> {
-                try {
-                    singleNewsTaskService.executeTask(url, taskId);
-                } catch (Exception e) {
-                    log.error("Failed to execute single task for url: {}", url, e);
-                }
-            }).start();
-
+            QueryWrapper<NewsLink> wrapper = new QueryWrapper<>();
+            wrapper.eq("is_delete", "N");
+            wrapper.eq("url", url);
+            wrapper.last("limit 1");
+            NewsLink newsLink = newsLinkMapper.selectOne(wrapper);
+            Date current = new Date();
+            Date startDate = DateUtils.addDays(current, -1);
+            List<String> ruleList = taskService.getRuleList(taskService.getDateListByRange(startDate, current));
+            List<String> cssSelectors = cssSelectorLinkRelationService.findCssSelectorsByUrl(newsLink.getUrl());
+            SingleNewsTaskService singleNewsTaskService = new SingleNewsTaskService(newsLink, new LatestSpiderTaskServiceImpl(), ruleList, cssSelectors, newsMapper, taskId, new CountDownLatch(1));
+            new Thread(singleNewsTaskService).start();
             return true;
         } catch (Exception e) {
             log.error("Failed to start single task for url: {}", url, e);
@@ -122,7 +142,7 @@ public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, News
         Page<TaskLog> pageParam = new Page<>(page == null ? 1 : page, size == null ? 10 : size);
         LambdaQueryWrapper<TaskLog> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(TaskLog::getIsDelete, "N")
-                   .orderByDesc(TaskLog::getCreateTime);
+                .orderByDesc(TaskLog::getCreateTime);
         return taskLogMapper.selectPage(pageParam, queryWrapper);
     }
 
@@ -131,8 +151,8 @@ public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, News
         Page<CssSelectorLinkRelation> pageParam = new Page<>(page == null ? 1 : page, size == null ? 10 : size);
         LambdaQueryWrapper<CssSelectorLinkRelation> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(CssSelectorLinkRelation::getUrl, url)
-                   .eq(CssSelectorLinkRelation::getIsDelete, "N")
-                   .orderByDesc(CssSelectorLinkRelation::getCreateTime);
+                .eq(CssSelectorLinkRelation::getIsDelete, "N")
+                .orderByDesc(CssSelectorLinkRelation::getCreateTime);
         return cssSelectorLinkRelationMapper.selectPage(pageParam, queryWrapper);
     }
 

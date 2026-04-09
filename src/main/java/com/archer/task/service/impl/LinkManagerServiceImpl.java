@@ -9,7 +9,6 @@ import com.archer.task.mapper.NewsLinkMapper;
 import com.archer.task.mapper.RssLinkMapper;
 import com.archer.task.service.LinkManagerService;
 import jakarta.annotation.Resource;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

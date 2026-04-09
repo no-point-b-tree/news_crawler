@@ -8,6 +8,7 @@ public interface TaskService {
     void startTask();
 
     List<String> getRuleList(List<Date> dateList);
-    
+
+    List<Date> getDateListByRange(Date startDate, Date endDate);
 
 }

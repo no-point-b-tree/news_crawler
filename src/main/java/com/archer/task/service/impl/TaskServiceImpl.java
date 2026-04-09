@@ -3,10 +3,7 @@ package com.archer.task.service.impl;
 import com.archer.task.constant.RuleTypeEnum;
 import com.archer.task.entity.*;
 import com.archer.task.mapper.*;
-import com.archer.task.service.SingleNewsTaskService;
-import com.archer.task.service.SingleRssTaskService;
-import com.archer.task.service.TaskLogService;
-import com.archer.task.service.TaskService;
+import com.archer.task.service.*;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -39,6 +36,9 @@ public class TaskServiceImpl implements TaskService {
     @Resource
     private TaskLogService taskLogService;
 
+    @Resource
+    private CssSelectorLinkRelationService cssSelectorLinkRelationService;
+
     private final ThreadPoolExecutor threadPool = new ThreadPoolExecutor(4, 8, 60, TimeUnit.SECONDS, queue, new BasicThreadFactory.Builder().namingPattern("spider-%d").build());
 
     @Override
@@ -57,14 +57,16 @@ public class TaskServiceImpl implements TaskService {
             CountDownLatch countDownLatch = new CountDownLatch(rssLinkList.size() + newsLinks.size());
             Date current = new Date();
             Date startDate = DateUtils.addDays(current, -1);
-            List<String> ruleList = getRuleList(Arrays.asList(startDate, current));
+            List<String> ruleList = getRuleList(getDateListByRange(startDate, current));
             for (String rssLink : rssLinkList) {
                 SingleRssTaskService task = new SingleRssTaskService(rssLink, startDate, current, new LatestSpiderTaskServiceImpl(), newsMapper, countDownLatch);
                 threadPool.execute(task);
             }
 
             for (NewsLink newsLink : newsLinks) {
-                SingleNewsTaskService task = new SingleNewsTaskService(newsLink, new LatestSpiderTaskServiceImpl(), ruleList, newsMapper, taskLog.getId(), countDownLatch);
+                List<String> cssSelectors = cssSelectorLinkRelationService.findCssSelectorsByUrl(newsLink.getUrl());
+                SingleNewsTaskService task = new SingleNewsTaskService(newsLink, new LatestSpiderTaskServiceImpl(), ruleList, cssSelectors
+                        , newsMapper, taskLog.getId(), countDownLatch);
                 threadPool.execute(task);
             }
             countDownLatch.await();
@@ -89,5 +91,16 @@ public class TaskServiceImpl implements TaskService {
             }
         }
         return ruleList;
+    }
+
+    @Override
+    public List<Date> getDateListByRange(Date startDate, Date endDate) {
+        long diffInMillis = endDate.getTime() - startDate.getTime();
+        long days = diffInMillis / (24 * 60 * 60 * 1000);
+        ArrayList<Date> list = new ArrayList<>();
+        for (int i = 0; i < days + 1; i++) {
+            list.add(DateUtils.addDays(startDate, i));
+        }
+        return list;
     }
 }

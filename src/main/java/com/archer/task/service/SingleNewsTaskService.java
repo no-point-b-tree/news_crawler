@@ -1,16 +1,12 @@
 package com.archer.task.service;
 
 import com.archer.task.constant.NewsStatusEnum;
-import com.archer.task.entity.Article;
-import com.archer.task.entity.Hyperlink;
-import com.archer.task.entity.News;
-import com.archer.task.entity.NewsLink;
+import com.archer.task.entity.*;
 import com.archer.task.mapper.NewsMapper;
 import com.archer.task.service.impl.LatestSpiderTaskServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.time.DateUtils;
 
-import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -33,12 +29,16 @@ public class SingleNewsTaskService implements Runnable {
 
     private final Long taskId;
 
-    public SingleNewsTaskService(NewsLink newsLink, LatestSpiderTaskServiceImpl latestSpiderTaskService, List<String> ruleList, NewsMapper newsMapper, Long taskId, CountDownLatch countDownLatch) {
+    private final List<String> cssSelectorLinkRelation;
+
+    public SingleNewsTaskService(NewsLink newsLink, LatestSpiderTaskServiceImpl latestSpiderTaskService, List<String> ruleList, List<String> cssSelectorLinkRelation
+            , NewsMapper newsMapper, Long taskId, CountDownLatch countDownLatch) {
         this.newsLink = newsLink;
         this.latestSpiderTaskService = latestSpiderTaskService;
         this.ruleList = ruleList;
         this.newsMapper = newsMapper;
         this.taskId = taskId;
+        this.cssSelectorLinkRelation = cssSelectorLinkRelation;
         this.countDownLatch = countDownLatch;
     }
 
@@ -46,7 +46,7 @@ public class SingleNewsTaskService implements Runnable {
     public void run() {
         try {
             Article newsPageContent = latestSpiderTaskService.getArticleContent(newsLink.getUrl());
-            List<Hyperlink> hyperLinks = JsoupExtractor.extractor(newsPageContent.getContent(), ruleList, newsLink.getMinLevel());
+            List<Hyperlink> hyperLinks = JsoupExtractor.extractor(newsPageContent.getContent(), ruleList, cssSelectorLinkRelation, newsLink.getMinLevel());
             for (Hyperlink hyperLink : hyperLinks) {
                 Article article = latestSpiderTaskService.getArticleContent(hyperLink.getHref());
                 try {

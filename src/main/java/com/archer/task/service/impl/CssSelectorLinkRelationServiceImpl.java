@@ -54,7 +54,7 @@ public class CssSelectorLinkRelationServiceImpl extends ServiceImpl<CssSelectorL
         CssSelectorLinkRelation relation = new CssSelectorLinkRelation();
         relation.setUrl(url);
         relation.setCssSelector(cssSelector);
-        relation.setIsDelete("0");
+        relation.setIsDelete("N");
         relation.setCreateTime(new Date());
         relation.setUpdateTime(new Date());
 
