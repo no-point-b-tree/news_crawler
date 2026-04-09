@@ -8,5 +8,6 @@ public interface TaskService {
     void startTask();
 
     List<String> getRuleList(List<Date> dateList);
+    
 
 }

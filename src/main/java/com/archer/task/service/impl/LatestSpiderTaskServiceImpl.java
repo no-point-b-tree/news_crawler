@@ -244,7 +244,7 @@ public class LatestSpiderTaskServiceImpl implements LatestSpiderTaskService {
             return articles;
         }
 
-        try (Browser browser = getBrowser()) {
+        try {
             for (String rssUrl : rssUrlList) {
                 try {
                     List<Article> articalList = parseRss(rssUrl);
@@ -324,11 +324,9 @@ public class LatestSpiderTaskServiceImpl implements LatestSpiderTaskService {
             Page page = browser.newPage();
             page.setViewportSize(1920, 1080);
             Response response = page.navigate(rssUrl, new Page.NavigateOptions());
-            page.waitForLoadState(LoadState.DOMCONTENTLOADED);
             String xmlContent = response.text();
             Document doc = Jsoup.parse(xmlContent, "", org.jsoup.parser.Parser.xmlParser());
             Elements items = doc.select("item, entry");
-
             for (Element item : items) {
                 Article article = new Article();
 
@@ -373,7 +371,7 @@ public class LatestSpiderTaskServiceImpl implements LatestSpiderTaskService {
             }
 
         } catch (Exception e) {
-            log.error("Failed to parse RSS from {}: {}", rssUrl, e.getMessage());
+            log.error("Failed to parse RSS from {}: ", rssUrl, e);
         }
         return articles;
     }
@@ -385,10 +383,11 @@ public class LatestSpiderTaskServiceImpl implements LatestSpiderTaskService {
         try (Browser browser = getBrowser()) {
             Page page = browser.newPage();
             page.setViewportSize(1920, 1080);
-            page.navigate(articleUrl);
+            page.navigate(articleUrl, new Page.NavigateOptions());
             page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+            String title = page.title();
             article.setUrl(articleUrl);
-            article.setTitle(page.title());
+            article.setTitle(title);
             article.setContent(page.content());
 
         } catch (Exception e) {

@@ -25,6 +25,8 @@ public class News {
 
     private String summary;
 
+    private String status;
+
     private String isDelete;
 
     private Date publishTime;

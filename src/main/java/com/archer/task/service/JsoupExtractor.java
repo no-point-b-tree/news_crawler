@@ -22,10 +22,11 @@ public class JsoupExtractor {
         }
         Document doc = Jsoup.parse(htmlContent, "UTF-8");
         // 找出所有文本内容为日期的元素
-        List<Hyperlink> hyperlinkList = new ArrayList<>();
+        List<Hyperlink> hyperlinkListAll = new ArrayList<>();
         for (String pattern : patternList) {
             Elements dateElements = doc.select("*:matches(^" + pattern + "$)");
             for (Element dateElem : dateElements) {
+                List<Hyperlink> hyperlinkList = new ArrayList<>();
                 // 向上找5层父节点
                 Element parent = dateElem.parent();
                 int level = 1;
@@ -55,8 +56,9 @@ public class JsoupExtractor {
                     parent = parent.parent();
                     level++;
                 }
+                hyperlinkListAll.addAll(hyperlinkList);
             }
         }
-        return hyperlinkList;
+        return hyperlinkListAll;
     }
 }
