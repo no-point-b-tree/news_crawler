@@ -4,8 +4,8 @@ export const newsLinkApi = {
   pageNewsLinks(params) {
     return request({
       url: '/manager/news-links/page',
-      method: 'get',
-      params
+      method: 'post',
+      data: params
     });
   },
 

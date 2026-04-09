@@ -3,6 +3,7 @@ package com.archer.task.manager.controller;
 import com.archer.task.entity.CssSelectorLinkRelation;
 import com.archer.task.entity.NewsLink;
 import com.archer.task.entity.TaskLog;
+import com.archer.task.manager.dto.NewsLinkPageRequest;
 import com.archer.task.manager.service.NewsLinkManagerService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
@@ -18,13 +19,14 @@ public class NewsLinkManagerController {
 
     private final NewsLinkManagerService newsLinkManagerService;
 
-    @GetMapping("/page")
-    public ResponseEntity<Page<NewsLink>> pageNewsLinks(
-            @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) List<String> langs,
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size) {
-        Page<NewsLink> result = newsLinkManagerService.pageNewsLinks(keyword, langs, page, size);
+    @PostMapping("/page")
+    public ResponseEntity<Page<NewsLink>> pageNewsLinks(@RequestBody NewsLinkPageRequest request) {
+        Page<NewsLink> result = newsLinkManagerService.pageNewsLinks(
+            request.getKeyword(), 
+            request.getLangs(), 
+            request.getPage(), 
+            request.getSize()
+        );
         return ResponseEntity.ok(result);
     }
 
