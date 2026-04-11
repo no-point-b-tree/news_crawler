@@ -47,11 +47,15 @@ export const newsLinkApi = {
     });
   },
 
-  startSingleTask(url) {
+  startSingleTask(url, timeRange) {
     return request({
       url: '/manager/news-links/start-task',
       method: 'post',
-      data: { url }
+      data: { 
+        url,
+        ...(timeRange && { startDate: timeRange.startDate }),
+        ...(timeRange && { endDate: timeRange.endDate })
+      }
     });
   },
 

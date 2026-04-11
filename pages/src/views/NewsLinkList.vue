@@ -388,10 +388,53 @@
             确定
           </el-button>
         </span>
-      </template>
-    </el-dialog>
-  </div>
-</template>
+       </template>
+     </el-dialog>
+
+     <el-dialog
+       v-model="taskTimeDialog.visible"
+       :title="taskTimeDialog.title"
+       width="500px"
+       @close="handleTaskTimeClose"
+     >
+       <el-form
+         ref="taskTimeFormRef"
+         :model="taskTimeDialog.formData"
+         :rules="taskTimeDialog.formRules"
+         label-width="120px"
+         label-position="left"
+       >
+         <el-form-item label="开始时间" prop="startDate">
+           <el-date-picker
+             v-model="taskTimeDialog.formData.startDate"
+             type="date"
+             placeholder="选择开始日期"
+             value-format="YYYY-MM-DD"
+             style="width: 100%"
+           />
+         </el-form-item>
+         <el-form-item label="结束时间" prop="endDate">
+           <el-date-picker
+             v-model="taskTimeDialog.formData.endDate"
+             type="date"
+             placeholder="选择结束日期"
+             value-format="YYYY-MM-DD"
+             style="width: 100%"
+           />
+         </el-form-item>
+       </el-form>
+
+       <template #footer>
+         <span class="dialog-footer">
+           <el-button @click="handleTaskTimeClose">取消</el-button>
+           <el-button type="primary" @click="handleTaskTimeSubmit" :loading="taskTimeDialog.loading">
+             开始执行
+           </el-button>
+         </span>
+       </template>
+     </el-dialog>
+   </div>
+ </template>
 
 <script setup>
 import { ref, reactive, onMounted, watch } from 'vue';
@@ -482,6 +525,27 @@ const formData = reactive({
   domain: '',
   lang: ''
 });
+
+const taskTimeDialog = reactive({
+  visible: false,
+  title: '选择任务时间范围',
+  loading: false,
+  currentUrl: '',
+  formData: {
+    startDate: '',
+    endDate: ''
+  },
+  formRules: {
+    startDate: [
+      { required: true, message: '请选择开始时间', trigger: 'change' }
+    ],
+    endDate: [
+      { required: true, message: '请选择结束时间', trigger: 'change' }
+    ]
+  }
+});
+
+const taskTimeFormRef = ref();
 
 const formRules = {
   name: [
@@ -660,13 +724,64 @@ watch(() => formData.url, (newUrl) => {
   }
 });
 
-const handleStartTask = async (row) => {
-  try {
-    await newsLinkApi.startSingleTask(row.url);
-    ElMessage.success('任务已启动');
-  } catch (error) {
-    ElMessage.error('启动任务失败');
+const handleStartTask = (row) => {
+  // 设置默认时间为前一天到今天
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - 1);
+  
+  // 格式化日期为 YYYY-MM-DD
+  const formatDate = (date) => {
+    return date.toISOString().split('T')[0];
+  };
+  
+  taskTimeDialog.currentUrl = row.url;
+  taskTimeDialog.formData.startDate = formatDate(startDate);
+  taskTimeDialog.formData.endDate = formatDate(endDate);
+  taskTimeDialog.visible = true;
+  
+  if (taskTimeFormRef.value) {
+    taskTimeFormRef.value.clearValidate();
   }
+};
+
+const handleTaskTimeSubmit = async () => {
+  try {
+    await taskTimeFormRef.value.validate();
+    
+    taskTimeDialog.loading = true;
+    
+    // 调用API启动任务，传递时间范围参数
+    await newsLinkApi.startSingleTask(taskTimeDialog.currentUrl, {
+      startDate: taskTimeDialog.formData.startDate,
+      endDate: taskTimeDialog.formData.endDate
+    });
+    
+    ElMessage.success('任务已提交，正在后台执行');
+    
+    // 关闭对话框
+    taskTimeDialog.visible = false;
+    
+    // 重置表单
+    taskTimeDialog.formData.startDate = '';
+    taskTimeDialog.formData.endDate = '';
+    
+  } catch (error) {
+    if (error && error.errors) {
+      ElMessage.error('请检查表单数据');
+    } else if (error !== 'cancel') {
+      ElMessage.error('启动任务失败');
+    }
+  } finally {
+    taskTimeDialog.loading = false;
+  }
+};
+
+const handleTaskTimeClose = () => {
+  taskTimeDialog.visible = false;
+  taskTimeDialog.formData.startDate = '';
+  taskTimeDialog.formData.endDate = '';
+  taskTimeDialog.currentUrl = '';
 };
 
 const handleBatchDelete = async () => {

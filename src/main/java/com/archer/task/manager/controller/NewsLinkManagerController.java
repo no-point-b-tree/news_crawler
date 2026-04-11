@@ -63,7 +63,11 @@ public class NewsLinkManagerController {
 
     @PostMapping("/start-task")
     public ResponseEntity<Boolean> startSingleTask(@RequestBody UrlRequest request) {
-        boolean result = newsLinkManagerService.startSingleTask(request.getUrl());
+        boolean result = newsLinkManagerService.startSingleTask(
+            request.getUrl(), 
+            request.getStartDate(), 
+            request.getEndDate()
+        );
         return ResponseEntity.ok(result);
     }
 

@@ -19,7 +19,7 @@ public interface NewsLinkManagerService extends IService<NewsLink> {
 
     boolean deleteNewsLink(Long id);
 
-    boolean startSingleTask(String url);
+    boolean startSingleTask(String url, String startDate, String endDate);
 
     Page<TaskLog> pageTaskLogsByUrl(String url, Integer page, Integer size);
 

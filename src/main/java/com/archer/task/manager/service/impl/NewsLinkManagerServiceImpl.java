@@ -122,13 +122,37 @@ public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, News
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean startSingleTask(String url) {
+    public boolean startSingleTask(String url, String startDateStr, String endDateStr) {
         try {
             TaskLog taskLog = new TaskLog();
             taskLog.setTaskType("SINGLE_MANUAL");
             taskLog.setIsDelete("N");
             taskLog.setCreateTime(new Date());
             taskLog.setUpdateTime(new Date());
+            // 解析时间范围
+            Date startDate;
+            Date endDate;
+            if (startDateStr != null && !startDateStr.trim().isEmpty() &&
+                    endDateStr != null && !endDateStr.trim().isEmpty()) {
+                // 使用前端传递的时间范围
+                try {
+                    startDate = DateUtils.parseDate(startDateStr + " 00:00:00", "yyyy-MM-dd HH:mm:ss");
+                    endDate = DateUtils.parseDate(endDateStr + " 23:59:59", "yyyy-MM-dd HH:mm:ss");
+                } catch (Exception e) {
+                    log.error("Failed to parse date range: startDate={}, endDate={}", startDateStr, endDateStr, e);
+                    // 如果解析失败，使用默认值（前一天到今天）
+                    Date current = new Date();
+                    startDate = DateUtils.addDays(current, -1);
+                    endDate = current;
+                }
+            } else {
+                // 使用默认值（前一天到今天）
+                Date current = new Date();
+                startDate = DateUtils.addDays(current, -1);
+                endDate = current;
+            }
+            taskLog.setStartDate(startDate);
+            taskLog.setEndDate(endDate);
             taskLogMapper.insert(taskLog);
             Long taskId = taskLog.getId();
             QueryWrapper<NewsLink> wrapper = new QueryWrapper<>();
@@ -136,10 +160,8 @@ public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, News
             wrapper.eq("url", url);
             wrapper.last("limit 1");
             NewsLink newsLink = newsLinkMapper.selectOne(wrapper);
-            Date current = new Date();
-            Date startDate = DateUtils.addDays(current, -1);
             List<CssSelectorLinkRelation> cssSelectors = cssSelectorLinkRelationService.findByUrl(newsLink.getUrl());
-            SingleNewsTaskService singleNewsTaskService = new SingleNewsTaskService(newsLink, new LatestSpiderTaskServiceImpl(), cssSelectors, newsMapper, taskId, new CountDownLatch(1),startDate,current);
+            SingleNewsTaskService singleNewsTaskService = new SingleNewsTaskService(newsLink, new LatestSpiderTaskServiceImpl(), cssSelectors, newsMapper, taskId, new CountDownLatch(1), startDate, endDate);
             new Thread(singleNewsTaskService).start();
             return true;
         } catch (Exception e) {
