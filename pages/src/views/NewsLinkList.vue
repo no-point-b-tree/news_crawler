@@ -89,7 +89,6 @@
             <span class="text-truncate" :title="row.domain">{{ truncateText(row.domain, 15) }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="minLevel" label="最小等级" min-width="90" />
         <el-table-column prop="createTime" label="创建时间" min-width="140">
           <template #default="{ row }">
             {{ formatDate(row.createTime) }}
@@ -182,16 +181,6 @@
             />
           </el-select>
         </el-form-item>
-
-        <el-form-item label="最小等级" prop="minLevel">
-          <el-input-number
-            v-model="formData.minLevel"
-            :min="0"
-            :max="10"
-            placeholder="请输入最小等级（0-10）"
-            style="width: 100%"
-          />
-        </el-form-item>
       </el-form>
 
       <template #footer>
@@ -255,6 +244,16 @@
                 </el-form-item>
               </el-col>
               <el-col :span="12">
+                <el-form-item label="日期匹配规则" prop="datePattern">
+                  <el-input
+                    v-model="cssSelectorDialog.formData.datePattern"
+                    placeholder="请输入日期匹配规则（如：yyyy-MM-dd HH:mm:ss）"
+                    maxlength="500"
+                    show-word-limit
+                  />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
                 <el-form-item label="启用状态" prop="enabled">
                   <el-select
                     v-model="cssSelectorDialog.formData.enabled"
@@ -283,10 +282,11 @@
               <span>已配置的CSS选择器</span>
             </div>
           </template>
-          <el-table :data="cssSelectorDialog.data" style="width: 100%">
+           <el-table :data="cssSelectorDialog.data" style="width: 100%">
             <el-table-column prop="cssSelectorGroup" label="CSS选择器组" min-width="150" />
             <el-table-column prop="dateCssSelector" label="日期选择器" min-width="120" />
             <el-table-column prop="hyperLinkCssSelector" label="超链接选择器" min-width="130" />
+            <el-table-column prop="datePattern" label="日期匹配规则" min-width="150" />
             <el-table-column prop="enabled" label="状态" width="80">
               <template #default="{ row }">
                 <el-tag :type="row.enabled === 'ON' ? 'success' : 'danger'" size="small">
@@ -361,6 +361,14 @@
             show-word-limit
           />
         </el-form-item>
+        <el-form-item label="日期匹配规则" prop="datePattern">
+          <el-input
+            v-model="cssSelectorEditDialog.formData.datePattern"
+            placeholder="请输入日期匹配规则（如：yyyy-MM-dd HH:mm:ss）"
+            maxlength="500"
+            show-word-limit
+          />
+        </el-form-item>
         <el-form-item label="启用状态" prop="enabled">
           <el-select
             v-model="cssSelectorEditDialog.formData.enabled"
@@ -419,6 +427,7 @@ const cssSelectorDialog = reactive({
     cssSelectorGroup: '',
     dateCssSelector: '',
     hyperLinkCssSelector: '',
+    datePattern: '',
     enabled: 'ON'
   },
   formRules: {
@@ -431,6 +440,9 @@ const cssSelectorDialog = reactive({
     ],
     hyperLinkCssSelector: [
       { max: 500, message: '长度不能超过 500 个字符', trigger: 'blur' }
+    ],
+    datePattern: [
+      { max: 200, message: '长度不能超过 200 个字符', trigger: 'blur' }
     ],
     enabled: [
       { required: true, message: '请选择启用状态', trigger: 'change' }
@@ -448,6 +460,7 @@ const cssSelectorEditDialog = reactive({
     cssSelectorGroup: '',
     dateCssSelector: '',
     hyperLinkCssSelector: '',
+    datePattern: '',
     enabled: 'ON'
   }
 });
@@ -467,8 +480,7 @@ const formData = reactive({
   name: '',
   url: '',
   domain: '',
-  lang: '',
-  minLevel: 0
+  lang: ''
 });
 
 const formRules = {
@@ -486,9 +498,6 @@ const formRules = {
   ],
   lang: [
     { required: true, message: '请选择语言', trigger: 'change' }
-  ],
-  minLevel: [
-    { type: 'number', min: 0, max: 10, message: '范围在 0 到 10 之间', trigger: 'blur' }
   ]
 };
 
@@ -565,8 +574,7 @@ const handleAdd = () => {
     name: '',
     url: '',
     domain: '',
-    lang: '',
-    minLevel: 0
+    lang: ''
   });
   
   formDialog.visible = true;
@@ -585,8 +593,7 @@ const handleEdit = (row) => {
     name: row.name || '',
     url: row.url || '',
     domain: row.domain || '',
-    lang: row.lang || '',
-    minLevel: row.minLevel || 0
+    lang: row.lang || ''
   });
   
   formDialog.visible = true;
@@ -727,6 +734,7 @@ const handleAddCssSelector = async () => {
       cssSelectorGroup: cssSelectorDialog.formData.cssSelectorGroup,
       dateCssSelector: cssSelectorDialog.formData.dateCssSelector,
       hyperLinkCssSelector: cssSelectorDialog.formData.hyperLinkCssSelector,
+      datePattern: cssSelectorDialog.formData.datePattern,
       enabled: cssSelectorDialog.formData.enabled
     };
     
@@ -737,6 +745,7 @@ const handleAddCssSelector = async () => {
       cssSelectorGroup: '',
       dateCssSelector: '',
       hyperLinkCssSelector: '',
+      datePattern: '',
       enabled: 'ON'
     });
     
@@ -792,6 +801,7 @@ const handleEditCssSelector = (row) => {
     cssSelectorGroup: row.cssSelectorGroup || '',
     dateCssSelector: row.dateCssSelector || '',
     hyperLinkCssSelector: row.hyperLinkCssSelector || '',
+    datePattern: row.datePattern || '',
     enabled: row.enabled || 'ON'
   });
   
@@ -814,6 +824,7 @@ const handleCssSelectorEditSubmit = async () => {
       cssSelectorGroup: cssSelectorEditDialog.formData.cssSelectorGroup,
       dateCssSelector: cssSelectorEditDialog.formData.dateCssSelector,
       hyperLinkCssSelector: cssSelectorEditDialog.formData.hyperLinkCssSelector,
+      datePattern: cssSelectorEditDialog.formData.datePattern,
       enabled: cssSelectorEditDialog.formData.enabled
     };
     

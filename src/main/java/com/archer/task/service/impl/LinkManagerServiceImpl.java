@@ -53,7 +53,6 @@ public class LinkManagerServiceImpl implements LinkManagerService {
             newsLink.setIsDelete("N");
             newsLink.setUrl(url);
             newsLink.setDomain(extractDomain(url));
-            newsLink.setMinLevel(minLevel);
             newsLinkMapper.insert(newsLink);
         }
     }

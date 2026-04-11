@@ -8,5 +8,6 @@ public class CssSelectorRelationRequest {
     private String cssSelectorGroup;
     private String dateCssSelector;
     private String hyperLinkCssSelector;
+    private String datePattern;
     private String enabled;
 }

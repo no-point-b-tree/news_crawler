@@ -20,8 +20,6 @@ public class NewsLink {
 
     private String isDelete;
 
-    private Integer minLevel;
-
     private String name;
 
     private String lang;

@@ -9,6 +9,7 @@
 ```sql
 -- archer.css_selector_link_relation definition
 
+
 CREATE TABLE `css_selector_link_relation` (
   `id` bigint NOT NULL COMMENT 'id',
   `url` varchar(5000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'url',
@@ -19,6 +20,7 @@ CREATE TABLE `css_selector_link_relation` (
   `date_css_selector` varchar(500) DEFAULT NULL COMMENT '日期选择器',
   `hyper_link_css_selector` varchar(500) DEFAULT NULL COMMENT '超链接选择器',
   `enabled` varchar(100) DEFAULT NULL COMMENT 'ON启用,OFF关闭',
+  `date_pattern` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '日期匹配规则',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='css选择器和url的关联关系表';
 

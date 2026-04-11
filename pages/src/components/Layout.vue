@@ -4,13 +4,14 @@
       <el-header>
         <div class="header">
           <div class="logo">新闻爬虫管理系统</div>
-          <el-menu
+           <el-menu
             mode="horizontal"
             :default-active="activeMenu"
             @select="handleMenuSelect"
           >
             <el-menu-item index="/news-link">新闻链接管理</el-menu-item>
             <el-menu-item index="/rss-link">RSS链接管理</el-menu-item>
+            <el-menu-item index="/task-log">任务日志管理</el-menu-item>
           </el-menu>
         </div>
       </el-header>

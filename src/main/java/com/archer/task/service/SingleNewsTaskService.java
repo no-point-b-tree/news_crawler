@@ -76,7 +76,7 @@ public class SingleNewsTaskService implements Runnable {
         if (publishDate == null) {
             publishDate = new Date();
         }
-        return publishDate.compareTo(startDate) <= 0 && publishDate.compareTo(endDate) <= 0;
+        return publishDate.compareTo(startDate) >= 0 && publishDate.compareTo(endDate) <= 0;
     }
 
     private News getNews(Article article) {

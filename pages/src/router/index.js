@@ -18,6 +18,12 @@ const routes = [
         name: 'RssLink',
         component: () => import('@/views/RssLinkList.vue'),
         meta: { title: 'RSS链接管理' }
+      },
+      {
+        path: 'task-log',
+        name: 'TaskLog',
+        component: () => import('@/views/TaskLogList.vue'),
+        meta: { title: '任务日志管理' }
       }
     ]
   }

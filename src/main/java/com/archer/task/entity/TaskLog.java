@@ -19,4 +19,8 @@ public class TaskLog {
 
     private Date updateTime;
 
+    private Date startDate;
+
+    private Date endDate;
+
 }

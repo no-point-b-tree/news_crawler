@@ -43,15 +43,26 @@ public class JsoupExtractor {
                             hyperlink.setHref(href);
                             hyperlink.setContent(text);
                             try {
-                                for (String rule : MATCH_RULE_LIST) {
-                                    if (date.text().matches(rule)) {
-                                        hyperlink.setDate(new Date());
+                                // 如果自定义规则解析失败或没有自定义规则，尝试通用规则
+                                if (hyperlink.getDate() == null) {
+                                    for (String rule : MATCH_RULE_LIST) {
+                                        if (date.text().matches(rule)) {
+                                            hyperlink.setDate(new Date());
+                                            break;
+                                        }
                                     }
                                 }
-                                if (hyperlink.getDate() == null) {
-                                    Date publishDate = DateUtils.parseDate(date.text(), cssSelectorLinkRelation.getDatePattern());
-                                    hyperlink.setDate(publishDate);
+                                // 首先检查是否有自定义的日期匹配规则
+                                String datePattern = cssSelectorLinkRelation.getDatePattern();
+                                if (datePattern != null && !datePattern.trim().isEmpty()) {
+                                    try {
+                                        Date publishDate = DateUtils.parseDate(date.text().trim(), datePattern);
+                                        hyperlink.setDate(publishDate);
+                                    } catch (Exception e) {
+                                        log.warn("使用自定义日期模式解析失败: {}, pattern: {}", date.text(), datePattern);
+                                    }
                                 }
+
                             } catch (Exception e) {
                                 log.error("日期转换失败:", e);
                             }
@@ -65,4 +76,5 @@ public class JsoupExtractor {
 
         return hyperlinkListAll;
     }
+
 }

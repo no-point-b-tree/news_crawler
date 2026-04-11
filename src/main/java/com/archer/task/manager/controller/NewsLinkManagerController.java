@@ -86,6 +86,7 @@ public class NewsLinkManagerController {
             request.getCssSelectorGroup(),
             request.getDateCssSelector(),
             request.getHyperLinkCssSelector(),
+            request.getDatePattern(),
             request.getEnabled()
         );
         return ResponseEntity.ok(result);
@@ -98,6 +99,7 @@ public class NewsLinkManagerController {
             request.getCssSelectorGroup(),
             request.getDateCssSelector(),
             request.getHyperLinkCssSelector(),
+            request.getDatePattern(),
             request.getEnabled()
         );
         return ResponseEntity.ok(result);

@@ -25,9 +25,9 @@ public interface NewsLinkManagerService extends IService<NewsLink> {
 
     Page<com.archer.task.entity.CssSelectorLinkRelation> pageCssSelectorsByUrl(String url, Integer page, Integer size);
 
-    boolean addCssSelector(String url, String cssSelectorGroup, String dateCssSelector, String hyperLinkCssSelector, String enabled);
+    boolean addCssSelector(String url, String cssSelectorGroup, String dateCssSelector, String hyperLinkCssSelector, String datePattern, String enabled);
 
-    boolean updateCssSelector(Long id, String cssSelectorGroup, String dateCssSelector, String hyperLinkCssSelector, String enabled);
+    boolean updateCssSelector(Long id, String cssSelectorGroup, String dateCssSelector, String hyperLinkCssSelector, String datePattern, String enabled);
 
     boolean deleteCssSelector(Long id);
 }

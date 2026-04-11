@@ -11,7 +11,7 @@ public interface CssSelectorLinkRelationService extends IService<CssSelectorLink
 
     List<CssSelectorLinkRelation> findByCssSelectorGroup(String cssSelectorGroup);
 
-    boolean saveOrUpdateRelation(String url, String cssSelectorGroup, String dateCssSelector, String hyperLinkCssSelector, String enabled);
+    boolean saveOrUpdateRelation(String url, String cssSelectorGroup, String dateCssSelector, String hyperLinkCssSelector, String datePattern, String enabled);
 
     boolean deleteByUrl(String url);
 

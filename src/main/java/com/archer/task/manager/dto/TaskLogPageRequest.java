@@ -6,5 +6,7 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class TaskLogPageRequest extends PageRequest {
-    private String url;
+    private String taskType;
+    private String startDate;
+    private String endDate;
 }

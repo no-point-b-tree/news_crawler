@@ -169,12 +169,13 @@ public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, News
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean addCssSelector(String url, String cssSelectorGroup, String dateCssSelector, String hyperLinkCssSelector, String enabled) {
+    public boolean addCssSelector(String url, String cssSelectorGroup, String dateCssSelector, String hyperLinkCssSelector, String datePattern, String enabled) {
         CssSelectorLinkRelation relation = new CssSelectorLinkRelation();
         relation.setUrl(url);
         relation.setCssSelectorGroup(cssSelectorGroup);
         relation.setDateCssSelector(dateCssSelector);
         relation.setHyperLinkCssSelector(hyperLinkCssSelector);
+        relation.setDatePattern(datePattern);
         relation.setEnabled(enabled != null ? enabled : "ON");
         relation.setIsDelete("N");
         relation.setCreateTime(new Date());
@@ -184,7 +185,7 @@ public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, News
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean updateCssSelector(Long id, String cssSelectorGroup, String dateCssSelector, String hyperLinkCssSelector, String enabled) {
+    public boolean updateCssSelector(Long id, String cssSelectorGroup, String dateCssSelector, String hyperLinkCssSelector, String datePattern, String enabled) {
         CssSelectorLinkRelation relation = cssSelectorLinkRelationMapper.selectById(id);
         if (relation == null) {
             return false;
@@ -192,6 +193,7 @@ public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, News
         relation.setCssSelectorGroup(cssSelectorGroup);
         relation.setDateCssSelector(dateCssSelector);
         relation.setHyperLinkCssSelector(hyperLinkCssSelector);
+        relation.setDatePattern(datePattern);
         relation.setEnabled(enabled != null ? enabled : "ON");
         relation.setUpdateTime(new Date());
         return cssSelectorLinkRelationMapper.updateById(relation) > 0;

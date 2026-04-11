@@ -40,7 +40,7 @@ public class CssSelectorLinkRelationServiceImpl extends ServiceImpl<CssSelectorL
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean saveOrUpdateRelation(String url, String cssSelectorGroup, String dateCssSelector, String hyperLinkCssSelector, String enabled) {
+    public boolean saveOrUpdateRelation(String url, String cssSelectorGroup, String dateCssSelector, String hyperLinkCssSelector, String datePattern, String enabled) {
         if (!StringUtils.hasText(url) || !StringUtils.hasText(cssSelectorGroup)) {
             return false;
         }
@@ -54,6 +54,7 @@ public class CssSelectorLinkRelationServiceImpl extends ServiceImpl<CssSelectorL
         if (existing != null) {
             existing.setDateCssSelector(dateCssSelector);
             existing.setHyperLinkCssSelector(hyperLinkCssSelector);
+            existing.setDatePattern(datePattern);
             existing.setEnabled(enabled);
             existing.setUpdateTime(new Date());
             return cssSelectorLinkRelationMapper.updateById(existing) > 0;
@@ -64,6 +65,7 @@ public class CssSelectorLinkRelationServiceImpl extends ServiceImpl<CssSelectorL
         relation.setCssSelectorGroup(cssSelectorGroup);
         relation.setDateCssSelector(dateCssSelector);
         relation.setHyperLinkCssSelector(hyperLinkCssSelector);
+        relation.setDatePattern(datePattern);
         relation.setEnabled(StringUtils.hasText(enabled) ? enabled : "ON");
         relation.setIsDelete("N");
         relation.setCreateTime(new Date());
