@@ -19,7 +19,7 @@ public class News {
     // 内容
     private String content;
 
-    private String tiKaContent;
+    private String tikaContent;
 
     private String source;
 

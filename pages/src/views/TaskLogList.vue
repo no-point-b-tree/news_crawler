@@ -58,7 +58,11 @@
                 style="width: 100%"
                 :flexible="true"
               >
-                <el-table-column prop="id" label="ID" width="80" />
+                <el-table-column label="序号" width="80">
+                  <template #default="{ $index }">
+                    {{ (pagination.current - 1) * pagination.size + $index + 1 }}
+                  </template>
+                </el-table-column>
                 <el-table-column prop="taskType" label="任务类型" min-width="120" />
                 <el-table-column prop="startDate" label="开始时间" min-width="150">
                   <template #default="{ row }">
@@ -75,9 +79,10 @@
                     {{ formatDate(row.createTime) }}
                   </template>
                 </el-table-column>
-                <el-table-column label="操作" width="120" fixed="right">
+                <el-table-column label="操作" width="180" fixed="right">
                   <template #default="{ row }">
                     <div class="action-buttons">
+                      <el-button type="primary" size="small" @click="handleViewDetails(row)">查看详情</el-button>
                       <el-button type="danger" size="small" @click="handleDelete(row)">删除</el-button>
                     </div>
                   </template>
@@ -101,10 +106,93 @@
             </el-card>
           </el-col>
         </el-row>
-      </el-main>
-    </el-container>
-  </div>
-</template>
+       </el-main>
+     </el-container>
+
+     <el-dialog
+       v-model="taskDetailDialog.visible"
+       :title="taskDetailDialog.title"
+       width="900px"
+       @close="handleTaskDetailClose"
+     >
+       <div v-loading="taskDetailDialog.loading">
+         <!-- 网站分组统计 -->
+         <el-card class="website-summary-card" v-if="taskDetailDialog.websiteData.length > 0">
+           <template #header>
+             <div class="card-header">
+               <span>网站统计</span>
+             </div>
+           </template>
+           <el-table :data="taskDetailDialog.websiteData" style="width: 100%">
+             <el-table-column prop="name" label="网站名称" min-width="150" />
+             <el-table-column prop="url" label="网站URL" min-width="200">
+               <template #default="{ row }">
+                 <el-link :href="row.url" target="_blank" type="primary" :title="row.url">
+                   {{ truncateText(row.url, 30) }}
+                 </el-link>
+               </template>
+             </el-table-column>
+             <el-table-column prop="newsCount" label="新闻数量" width="100" />
+             <el-table-column label="操作" width="120" fixed="right">
+               <template #default="{ row }">
+                 <el-button type="primary" size="small" @click="handleViewWebsiteNews(row)">查看新闻</el-button>
+               </template>
+             </el-table-column>
+           </el-table>
+         </el-card>
+
+         <div v-else class="no-data">
+           暂无网站数据
+         </div>
+       </div>
+     </el-dialog>
+
+     <!-- 网站新闻详情对话框 -->
+     <el-dialog
+       v-model="websiteNewsDialog.visible"
+       :title="websiteNewsDialog.title"
+       width="1000px"
+       @close="handleWebsiteNewsClose"
+     >
+       <div v-loading="websiteNewsDialog.loading">
+         <el-table :data="websiteNewsDialog.newsData" style="width: 100%">
+           <el-table-column prop="title" label="新闻标题" min-width="200">
+             <template #default="{ row }">
+               <span class="text-truncate" :title="row.title">{{ truncateText(row.title, 30) }}</span>
+             </template>
+           </el-table-column>
+           <el-table-column prop="content" label="新闻内容" min-width="300">
+             <template #default="{ row }">
+               <span class="text-truncate" :title="row.content">{{ truncateText(row.content, 100) }}</span>
+             </template>
+           </el-table-column>
+           <el-table-column prop="publishTime" label="发布时间" width="150">
+             <template #default="{ row }">
+               {{ formatDate(row.publishTime) }}
+             </template>
+           </el-table-column>
+           <el-table-column prop="createTime" label="采集时间" width="150">
+             <template #default="{ row }">
+               {{ formatDate(row.createTime) }}
+             </template>
+           </el-table-column>
+         </el-table>
+
+         <div class="pagination" v-if="websiteNewsDialog.pagination.total > 0">
+           <el-pagination
+             v-model:current-page="websiteNewsDialog.pagination.current"
+             v-model:page-size="websiteNewsDialog.pagination.size"
+             :total="websiteNewsDialog.pagination.total"
+             :page-sizes="[10, 20, 50]"
+             layout="total, sizes, prev, pager, next"
+             @size-change="handleWebsiteNewsSizeChange"
+             @current-change="handleWebsiteNewsPageChange"
+           />
+         </div>
+       </div>
+     </el-dialog>
+   </div>
+ </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
@@ -123,6 +211,27 @@ const pagination = reactive({
   current: 1,
   size: 10,
   total: 0
+});
+
+const taskDetailDialog = reactive({
+  visible: false,
+  title: '任务执行详情',
+  loading: false,
+  taskId: null,
+  websiteData: []
+});
+
+const websiteNewsDialog = reactive({
+  visible: false,
+  title: '网站新闻详情',
+  loading: false,
+  sourceUrl: '',
+  newsData: [],
+  pagination: {
+    current: 1,
+    size: 10,
+    total: 0
+  }
 });
 
 onMounted(() => {
@@ -184,6 +293,100 @@ const handleDelete = async (row) => {
       ElMessage.error('删除失败');
     }
   }
+};
+
+const handleViewDetails = async (row) => {
+  try {
+    taskDetailDialog.taskId = row.id;
+    taskDetailDialog.title = `任务执行详情 - ID: ${row.id}`;
+    taskDetailDialog.loading = true;
+    taskDetailDialog.visible = true;
+    
+    // 获取任务详情数据
+    const result = await taskLogApi.getTaskDetails(row.id);
+    taskDetailDialog.websiteData = result.websites || [];
+    
+  } catch (error) {
+    console.error('获取任务详情失败:', error);
+    ElMessage.error('获取任务详情失败');
+    taskDetailDialog.visible = false;
+  } finally {
+    taskDetailDialog.loading = false;
+  }
+};
+
+const handleTaskDetailClose = () => {
+  taskDetailDialog.visible = false;
+  taskDetailDialog.taskId = null;
+  taskDetailDialog.websiteData = [];
+};
+
+const handleViewWebsiteNews = async (row) => {
+  try {
+    websiteNewsDialog.sourceUrl = row.url;
+    websiteNewsDialog.title = `网站新闻 - ${row.name}`;
+    websiteNewsDialog.loading = true;
+    websiteNewsDialog.visible = true;
+    
+    // 重置分页
+    websiteNewsDialog.pagination.current = 1;
+    
+    await fetchWebsiteNews();
+    
+  } catch (error) {
+    console.error('获取网站新闻失败:', error);
+    ElMessage.error('获取网站新闻失败');
+  } finally {
+    websiteNewsDialog.loading = false;
+  }
+};
+
+const fetchWebsiteNews = async () => {
+  try {
+    websiteNewsDialog.loading = true;
+    
+    const params = {
+      sourceUrl: websiteNewsDialog.sourceUrl,
+      taskId: taskDetailDialog.taskId,
+      page: websiteNewsDialog.pagination.current,
+      size: websiteNewsDialog.pagination.size
+    };
+    
+    const result = await taskLogApi.getWebsiteNews(params);
+    websiteNewsDialog.newsData = result.records || [];
+    websiteNewsDialog.pagination.total = result.total || 0;
+    
+  } catch (error) {
+    console.error('获取网站新闻失败:', error);
+    ElMessage.error('获取网站新闻失败');
+  } finally {
+    websiteNewsDialog.loading = false;
+  }
+};
+
+const handleWebsiteNewsClose = () => {
+  websiteNewsDialog.visible = false;
+  websiteNewsDialog.sourceUrl = '';
+  websiteNewsDialog.newsData = [];
+  websiteNewsDialog.pagination.current = 1;
+  websiteNewsDialog.pagination.total = 0;
+};
+
+const handleWebsiteNewsPageChange = (page) => {
+  websiteNewsDialog.pagination.current = page;
+  fetchWebsiteNews();
+};
+
+const handleWebsiteNewsSizeChange = (size) => {
+  websiteNewsDialog.pagination.size = size;
+  websiteNewsDialog.pagination.current = 1;
+  fetchWebsiteNews();
+};
+
+const truncateText = (text, maxLength) => {
+  if (!text) return '';
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength) + '...';
 };
 
 const formatDate = (dateString) => {
@@ -259,6 +462,35 @@ const formatDate = (dateString) => {
   color: #909399;
   font-size: 14px;
 }
+
+.website-summary-card {
+  margin-bottom: 20px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.url-link {
+  word-break: break-all;
+}
+
+.no-data {
+  text-align: center;
+  padding: 40px;
+  color: #909399;
+  font-size: 14px;
+}
+
+
 
 @media (max-width: 768px) {
   .pagination {

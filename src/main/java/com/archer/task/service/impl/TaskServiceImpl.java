@@ -46,6 +46,10 @@ public class TaskServiceImpl implements TaskService {
         try {
             TaskLog taskLog = new TaskLog();
             taskLog.setTaskType("自动任务");
+            Date current = new Date();
+            Date startDate = DateUtils.addDays(current, -1);
+            taskLog.setStartDate(startDate);
+            taskLog.setEndDate(current);
             taskLogService.save(taskLog);
             QueryWrapper<RssLink> rssLinkQuery = new QueryWrapper<>();
             rssLinkQuery.eq("is_delete", "N");
@@ -55,17 +59,14 @@ public class TaskServiceImpl implements TaskService {
             newsQuery.eq("is_delete", "N");
             List<NewsLink> newsLinks = newsLinkMapper.selectList(newsQuery);
             CountDownLatch countDownLatch = new CountDownLatch(rssLinkList.size() + newsLinks.size());
-            Date current = new Date();
-            Date startDate = DateUtils.addDays(current, -1);
             for (String rssLink : rssLinkList) {
                 SingleRssTaskService task = new SingleRssTaskService(rssLink, startDate, current, new LatestSpiderTaskServiceImpl(), newsMapper, countDownLatch);
                 threadPool.execute(task);
             }
-
             for (NewsLink newsLink : newsLinks) {
                 List<CssSelectorLinkRelation> cssSelectors = cssSelectorLinkRelationService.findByUrl(newsLink.getUrl());
                 SingleNewsTaskService task = new SingleNewsTaskService(newsLink, new LatestSpiderTaskServiceImpl(), cssSelectors
-                        , newsMapper, taskLog.getId(), countDownLatch,startDate,current);
+                        , newsMapper, taskLog.getId(), countDownLatch, startDate, current);
                 threadPool.execute(task);
             }
             countDownLatch.await();

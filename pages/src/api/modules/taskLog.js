@@ -14,5 +14,20 @@ export const taskLogApi = {
       url: `/manager/task-logs/${id}`,
       method: 'delete'
     });
+  },
+
+  getTaskDetails(taskId) {
+    return request({
+      url: `/manager/task-logs/${taskId}/details`,
+      method: 'get'
+    });
+  },
+
+  getWebsiteNews(params) {
+    return request({
+      url: '/manager/task-logs/website-news',
+      method: 'post',
+      data: params
+    });
   }
 };

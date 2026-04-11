@@ -1,8 +1,14 @@
 package com.archer.task.manager.service.impl;
 
 import com.archer.task.entity.TaskLog;
+import com.archer.task.entity.News;
+import com.archer.task.entity.NewsLink;
 import com.archer.task.manager.service.TaskLogManagerService;
+import com.archer.task.manager.vo.TaskDetailVO;
+import com.archer.task.manager.vo.WebsiteNewsVO;
 import com.archer.task.mapper.TaskLogMapper;
+import com.archer.task.mapper.NewsMapper;
+import com.archer.task.mapper.NewsLinkMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -13,6 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.Date;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -20,6 +30,8 @@ import java.util.Date;
 public class TaskLogManagerServiceImpl extends ServiceImpl<TaskLogMapper, TaskLog> implements TaskLogManagerService {
 
     private final TaskLogMapper taskLogMapper;
+    private final NewsMapper newsMapper;
+    private final NewsLinkMapper newsLinkMapper;
 
     @Override
     public Page<TaskLog> pageTaskLogs(String taskType, String startDate, String endDate, Integer page, Integer size) {
@@ -51,5 +63,95 @@ public class TaskLogManagerServiceImpl extends ServiceImpl<TaskLogMapper, TaskLo
         taskLog.setIsDelete("Y");
         taskLog.setUpdateTime(new Date());
         return taskLogMapper.updateById(taskLog) > 0;
+    }
+
+    @Override
+    public TaskDetailVO getTaskDetails(Long taskId) {
+        TaskDetailVO taskDetailVO = new TaskDetailVO();
+        taskDetailVO.setTaskId(taskId);
+        
+        // 获取任务信息
+        TaskLog taskLog = taskLogMapper.selectById(taskId);
+        if (taskLog != null) {
+            taskDetailVO.setTaskType(taskLog.getTaskType());
+        }
+        
+        // 查询该任务下的所有新闻，按source_url分组统计
+        LambdaQueryWrapper<News> newsQueryWrapper = new LambdaQueryWrapper<>();
+        newsQueryWrapper.eq(News::getTaskId, taskId)
+                       .eq(News::getIsDelete, "N")
+                       .isNotNull(News::getSourceUrl);
+        
+        List<News> newsList = newsMapper.selectList(newsQueryWrapper);
+        
+        // 按source_url分组统计
+        Map<String, Long> newsCountBySourceUrl = newsList.stream()
+            .collect(Collectors.groupingBy(News::getSourceUrl, Collectors.counting()));
+        
+        // 构建网站统计信息
+        List<TaskDetailVO.WebsiteSummary> websiteSummaries = new ArrayList<>();
+        
+        for (Map.Entry<String, Long> entry : newsCountBySourceUrl.entrySet()) {
+            String sourceUrl = entry.getKey();
+            Long newsCount = entry.getValue();
+            
+            // 查找对应的网站信息
+            LambdaQueryWrapper<NewsLink> newsLinkQueryWrapper = new LambdaQueryWrapper<>();
+            newsLinkQueryWrapper.eq(NewsLink::getUrl, sourceUrl)
+                               .eq(NewsLink::getIsDelete, "N")
+                               .last("limit 1");
+            
+            NewsLink newsLink = newsLinkMapper.selectOne(newsLinkQueryWrapper);
+            
+            TaskDetailVO.WebsiteSummary websiteSummary = new TaskDetailVO.WebsiteSummary();
+            websiteSummary.setUrl(sourceUrl);
+            websiteSummary.setNewsCount(newsCount.intValue());
+            
+            if (newsLink != null) {
+                websiteSummary.setName(newsLink.getName());
+            } else {
+                // 如果没有找到对应的网站信息，使用URL作为名称
+                websiteSummary.setName(sourceUrl);
+            }
+            
+            websiteSummaries.add(websiteSummary);
+        }
+        
+        taskDetailVO.setWebsites(websiteSummaries);
+        return taskDetailVO;
+    }
+
+    @Override
+    public Page<WebsiteNewsVO> getWebsiteNews(String sourceUrl, Long taskId, Integer page, Integer size) {
+        Page<News> pageParam = new Page<>(page, size);
+        
+        LambdaQueryWrapper<News> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(News::getIsDelete, "N")
+                   .eq(News::getSourceUrl, sourceUrl);
+        
+        if (taskId != null) {
+            queryWrapper.eq(News::getTaskId, taskId);
+        }
+        
+        queryWrapper.orderByDesc(News::getPublishTime);
+        
+        Page<News> newsPage = newsMapper.selectPage(pageParam, queryWrapper);
+        
+        // 转换为VO
+        Page<WebsiteNewsVO> resultPage = new Page<>(newsPage.getCurrent(), newsPage.getSize(), newsPage.getTotal());
+        
+        List<WebsiteNewsVO> voList = newsPage.getRecords().stream().map(news -> {
+            WebsiteNewsVO vo = new WebsiteNewsVO();
+            vo.setId(news.getId());
+            vo.setTitle(news.getTitle());
+            vo.setContent(news.getContent());
+            vo.setPublishTime(news.getPublishTime());
+            vo.setCreateTime(news.getCreateTime());
+            vo.setSourceUrl(news.getSourceUrl());
+            return vo;
+        }).collect(Collectors.toList());
+        
+        resultPage.setRecords(voList);
+        return resultPage;
     }
 }
