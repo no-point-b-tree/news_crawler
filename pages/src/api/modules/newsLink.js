@@ -16,6 +16,22 @@ export const newsLinkApi = {
     });
   },
 
+  createNewsLink(data) {
+    return request({
+      url: '/manager/news-links',
+      method: 'post',
+      data
+    });
+  },
+
+  createNewsLink(data) {
+    return request({
+      url: '/manager/news-links',
+      method: 'post',
+      data
+    });
+  },
+
   updateNewsLink(id, data) {
     return request({
       url: `/manager/news-links/${id}`,
@@ -40,17 +56,17 @@ export const newsLinkApi = {
 
   pageTaskLogsByUrl(url, params) {
     return request({
-      url: `/manager/news-links/${encodeURIComponent(url)}/task-logs`,
-      method: 'get',
-      params
+      url: `/manager/news-links/${encodeURIComponent(url)}/task-logs/page`,
+      method: 'post',
+      data: params
     });
   },
 
   pageCssSelectorsByUrl(url, params) {
     return request({
-      url: `/manager/news-links/${encodeURIComponent(url)}/css-selectors`,
-      method: 'get',
-      params
+      url: `/manager/news-links/${encodeURIComponent(url)}/css-selectors/page`,
+      method: 'post',
+      data: params
     });
   },
 
@@ -58,7 +74,7 @@ export const newsLinkApi = {
     return request({
       url: `/manager/news-links/${encodeURIComponent(url)}/css-selectors`,
       method: 'post',
-      params: { cssSelector }
+      data: { cssSelector }
     });
   },
 
@@ -66,7 +82,7 @@ export const newsLinkApi = {
     return request({
       url: `/manager/news-links/css-selectors/${id}`,
       method: 'put',
-      params: { cssSelector }
+      data: { cssSelector }
     });
   },
 

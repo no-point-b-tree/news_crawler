@@ -13,6 +13,8 @@ public interface NewsLinkManagerService extends IService<NewsLink> {
 
     List<String> getAllLanguages();
 
+    boolean createNewsLink(NewsLink newsLink);
+
     boolean updateNewsLink(NewsLink newsLink);
 
     boolean deleteNewsLink(Long id);

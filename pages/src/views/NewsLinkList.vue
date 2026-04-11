@@ -128,6 +128,83 @@
     </el-container>
 
     <el-dialog
+      v-model="formDialog.visible"
+      :title="formDialog.title"
+      width="600px"
+      @close="handleFormClose"
+    >
+      <el-form
+        ref="formRef"
+        :model="formData"
+        :rules="formRules"
+        label-width="100px"
+        label-position="left"
+      >
+        <el-form-item label="名称" prop="name">
+          <el-input
+            v-model="formData.name"
+            placeholder="请输入新闻链接名称"
+            maxlength="100"
+            show-word-limit
+          />
+        </el-form-item>
+
+        <el-form-item label="URL" prop="url">
+          <el-input
+            v-model="formData.url"
+            placeholder="请输入完整的URL地址"
+            maxlength="500"
+            show-word-limit
+          />
+        </el-form-item>
+
+        <el-form-item label="域名" prop="domain">
+          <el-input
+            v-model="formData.domain"
+            placeholder="请输入域名（自动从URL提取）"
+            maxlength="100"
+            show-word-limit
+          />
+        </el-form-item>
+
+        <el-form-item label="语言" prop="lang">
+          <el-select
+            v-model="formData.lang"
+            placeholder="请选择语言"
+            style="width: 100%"
+            clearable
+          >
+            <el-option
+              v-for="lang in languages"
+              :key="lang"
+              :label="lang"
+              :value="lang"
+            />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="最小等级" prop="minLevel">
+          <el-input-number
+            v-model="formData.minLevel"
+            :min="0"
+            :max="10"
+            placeholder="请输入最小等级（0-10）"
+            style="width: 100%"
+          />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="formDialog.visible = false">取消</el-button>
+          <el-button type="primary" @click="handleFormSubmit" :loading="formDialog.loading">
+            确定
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
+
+    <el-dialog
       v-model="cssSelectorDialog.visible"
       :title="`${cssSelectorDialog.url} - CSS选择器管理`"
       width="800px"
@@ -175,7 +252,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { newsLinkApi } from '@/api';
 
@@ -205,6 +282,45 @@ const cssSelectorDialog = reactive({
     total: 0
   }
 });
+
+const formDialog = reactive({
+  visible: false,
+  title: '新增新闻链接',
+  loading: false,
+  isEdit: false
+});
+
+const formData = reactive({
+  id: null,
+  name: '',
+  url: '',
+  domain: '',
+  lang: '',
+  minLevel: 0
+});
+
+const formRules = {
+  name: [
+    { required: true, message: '请输入名称', trigger: 'blur' },
+    { min: 1, max: 100, message: '长度在 1 到 100 个字符', trigger: 'blur' }
+  ],
+  url: [
+    { required: true, message: '请输入URL', trigger: 'blur' },
+    { min: 1, max: 500, message: '长度在 1 到 500 个字符', trigger: 'blur' }
+  ],
+  domain: [
+    { required: true, message: '请输入域名', trigger: 'blur' },
+    { min: 1, max: 100, message: '长度在 1 到 100 个字符', trigger: 'blur' }
+  ],
+  lang: [
+    { required: true, message: '请选择语言', trigger: 'change' }
+  ],
+  minLevel: [
+    { type: 'number', min: 0, max: 10, message: '范围在 0 到 10 之间', trigger: 'blur' }
+  ]
+};
+
+const formRef = ref();
 
 onMounted(() => {
   fetchLanguages();
@@ -269,11 +385,74 @@ const handleSelectionChange = (val) => {
 };
 
 const handleAdd = () => {
-  ElMessage.info('新增功能待实现');
+  formDialog.title = '新增新闻链接';
+  formDialog.isEdit = false;
+  
+  Object.assign(formData, {
+    id: null,
+    name: '',
+    url: '',
+    domain: '',
+    lang: '',
+    minLevel: 0
+  });
+  
+  formDialog.visible = true;
+  
+  if (formRef.value) {
+    formRef.value.clearValidate();
+  }
 };
 
 const handleEdit = (row) => {
-  ElMessage.info('编辑功能待实现');
+  formDialog.title = '编辑新闻链接';
+  formDialog.isEdit = true;
+  
+  Object.assign(formData, {
+    id: row.id,
+    name: row.name || '',
+    url: row.url || '',
+    domain: row.domain || '',
+    lang: row.lang || '',
+    minLevel: row.minLevel || 0
+  });
+  
+  formDialog.visible = true;
+  
+  if (formRef.value) {
+    formRef.value.clearValidate();
+  }
+};
+
+const handleFormClose = () => {
+  formDialog.loading = false;
+};
+
+const handleFormSubmit = async () => {
+  try {
+    await formRef.value.validate();
+    
+    formDialog.loading = true;
+    
+    if (formDialog.isEdit) {
+      await newsLinkApi.updateNewsLink(formData.id, formData);
+      ElMessage.success('更新成功');
+    } else {
+      await newsLinkApi.createNewsLink(formData);
+      ElMessage.success('创建成功');
+    }
+    
+    formDialog.visible = false;
+    fetchData();
+  } catch (error) {
+    if (error && error.errors) {
+      ElMessage.error('请检查表单数据');
+    } else {
+      ElMessage.error(formDialog.isEdit ? '更新失败' : '创建失败');
+    }
+  } finally {
+    formDialog.loading = false;
+  }
 };
 
 const handleDelete = async (row) => {
@@ -290,6 +469,17 @@ const handleDelete = async (row) => {
     }
   }
 };
+
+watch(() => formData.url, (newUrl) => {
+  if (newUrl && !formDialog.isEdit) {
+    try {
+      const urlObj = new URL(newUrl);
+      formData.domain = urlObj.hostname;
+    } catch (error) {
+      formData.domain = '';
+    }
+  }
+});
 
 const handleStartTask = async (row) => {
   try {

@@ -3,7 +3,9 @@ package com.archer.task.manager.controller;
 import com.archer.task.entity.CssSelectorLinkRelation;
 import com.archer.task.entity.NewsLink;
 import com.archer.task.entity.TaskLog;
+import com.archer.task.manager.dto.CssSelectorRequest;
 import com.archer.task.manager.dto.NewsLinkPageRequest;
+import com.archer.task.manager.dto.PageRequest;
 import com.archer.task.manager.service.NewsLinkManagerService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +38,12 @@ public class NewsLinkManagerController {
         return ResponseEntity.ok(languages);
     }
 
+    @PostMapping
+    public ResponseEntity<Boolean> createNewsLink(@RequestBody NewsLink newsLink) {
+        boolean result = newsLinkManagerService.createNewsLink(newsLink);
+        return ResponseEntity.ok(result);
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<Boolean> updateNewsLink(@PathVariable Long id, @RequestBody NewsLink newsLink) {
         newsLink.setId(id);
@@ -55,33 +63,27 @@ public class NewsLinkManagerController {
         return ResponseEntity.ok(result);
     }
 
-    @GetMapping("/{url}/task-logs")
-    public ResponseEntity<Page<TaskLog>> pageTaskLogsByUrl(
-            @PathVariable String url,
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size) {
-        Page<TaskLog> result = newsLinkManagerService.pageTaskLogsByUrl(url, page, size);
+    @PostMapping("/{url}/task-logs/page")
+    public ResponseEntity<Page<TaskLog>> pageTaskLogsByUrl(@PathVariable String url, @RequestBody PageRequest request) {
+        Page<TaskLog> result = newsLinkManagerService.pageTaskLogsByUrl(url, request.getPage(), request.getSize());
         return ResponseEntity.ok(result);
     }
 
-    @GetMapping("/{url}/css-selectors")
-    public ResponseEntity<Page<CssSelectorLinkRelation>> pageCssSelectorsByUrl(
-            @PathVariable String url,
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size) {
-        Page<CssSelectorLinkRelation> result = newsLinkManagerService.pageCssSelectorsByUrl(url, page, size);
+    @PostMapping("/{url}/css-selectors/page")
+    public ResponseEntity<Page<CssSelectorLinkRelation>> pageCssSelectorsByUrl(@PathVariable String url, @RequestBody PageRequest request) {
+        Page<CssSelectorLinkRelation> result = newsLinkManagerService.pageCssSelectorsByUrl(url, request.getPage(), request.getSize());
         return ResponseEntity.ok(result);
     }
 
     @PostMapping("/{url}/css-selectors")
-    public ResponseEntity<Boolean> addCssSelector(@PathVariable String url, @RequestParam String cssSelector) {
-        boolean result = newsLinkManagerService.addCssSelector(url, cssSelector);
+    public ResponseEntity<Boolean> addCssSelector(@PathVariable String url, @RequestBody CssSelectorRequest request) {
+        boolean result = newsLinkManagerService.addCssSelector(url, request.getCssSelector());
         return ResponseEntity.ok(result);
     }
 
     @PutMapping("/css-selectors/{id}")
-    public ResponseEntity<Boolean> updateCssSelector(@PathVariable Long id, @RequestParam String cssSelector) {
-        boolean result = newsLinkManagerService.updateCssSelector(id, cssSelector);
+    public ResponseEntity<Boolean> updateCssSelector(@PathVariable Long id, @RequestBody CssSelectorRequest request) {
+        boolean result = newsLinkManagerService.updateCssSelector(id, request.getCssSelector());
         return ResponseEntity.ok(result);
     }
 

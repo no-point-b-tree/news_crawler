@@ -88,6 +88,18 @@ public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, News
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public boolean createNewsLink(NewsLink newsLink) {
+        if (newsLink.getUrl() == null || newsLink.getUrl().trim().isEmpty()) {
+            return false;
+        }
+        newsLink.setIsDelete("N");
+        newsLink.setCreateTime(new Date());
+        newsLink.setUpdateTime(new Date());
+        return newsLinkMapper.insert(newsLink) > 0;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean updateNewsLink(NewsLink newsLink) {
         if (newsLink.getId() == null) {
             return false;

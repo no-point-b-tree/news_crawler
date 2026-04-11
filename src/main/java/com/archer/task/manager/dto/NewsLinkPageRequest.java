@@ -1,13 +1,13 @@
 package com.archer.task.manager.dto;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.util.List;
 
 @Data
-public class NewsLinkPageRequest {
+@EqualsAndHashCode(callSuper = true)
+public class NewsLinkPageRequest extends PageRequest {
     private String keyword;
     private List<String> langs;
-    private Integer page = 1;
-    private Integer size = 10;
 }
