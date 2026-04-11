@@ -446,8 +446,12 @@ const getStatusText = (status) => {
 
 const truncateText = (text, maxLength) => {
   if (!text) return '';
-  if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength) + '...';
+  
+  // 清理HTML标签（作为额外的保护，即使后端应该返回纯文本）
+  let cleanText = text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  
+  if (cleanText.length <= maxLength) return cleanText;
+  return cleanText.substring(0, maxLength) + '...';
 };
 
 const formatDate = (dateString) => {

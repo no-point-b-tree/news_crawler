@@ -375,6 +375,9 @@
               </el-col>
               <el-col :span="12">
                 <el-form-item>
+                  <el-button type="info" @click="handlePasteCssSelectorConfig" :loading="cssSelectorDialog.loading">
+                    一键粘贴
+                  </el-button>
                   <el-button type="primary" @click="handleAddCssSelector" :loading="cssSelectorDialog.loading">
                     添加配置
                   </el-button>
@@ -407,10 +410,11 @@
                 {{ formatDate(row.createTime) }}
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="180" fixed="right">
+            <el-table-column label="操作" width="250" fixed="right">
               <template #default="{ row }">
                 <div class="action-buttons">
                   <el-button type="primary" size="small" @click="handleEditCssSelector(row)">编辑</el-button>
+                  <el-button type="success" size="small" @click="handleSyncToAddForm(row)">一键同步</el-button>
                   <el-button type="danger" size="small" @click="handleDeleteCssSelector(row)">删除</el-button>
                 </div>
               </template>
@@ -489,14 +493,17 @@
         </el-form-item>
       </el-form>
 
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="cssSelectorEditDialog.visible = false">取消</el-button>
-          <el-button type="primary" @click="handleCssSelectorEditSubmit" :loading="cssSelectorEditDialog.loading">
-            确定
-          </el-button>
-        </span>
-       </template>
+       <template #footer>
+         <span class="dialog-footer">
+           <el-button @click="cssSelectorEditDialog.visible = false">取消</el-button>
+           <el-button type="info" @click="handleCopyCssSelectorConfig" :loading="cssSelectorEditDialog.loading">
+             一键复制
+           </el-button>
+           <el-button type="primary" @click="handleCssSelectorEditSubmit" :loading="cssSelectorEditDialog.loading">
+             确定
+           </el-button>
+         </span>
+        </template>
      </el-dialog>
 
      <el-dialog
@@ -1220,6 +1227,185 @@ const handleCssSelectorEditClose = () => {
   cssSelectorEditDialog.loading = false;
 };
 
+// 一键复制CSS选择器配置
+const handleCopyCssSelectorConfig = () => {
+  try {
+    // 创建配置对象
+    const config = {
+      cssSelectorGroup: cssSelectorEditDialog.formData.cssSelectorGroup,
+      dateCssSelector: cssSelectorEditDialog.formData.dateCssSelector,
+      hyperLinkCssSelector: cssSelectorEditDialog.formData.hyperLinkCssSelector,
+      datePattern: cssSelectorEditDialog.formData.datePattern,
+      enabled: cssSelectorEditDialog.formData.enabled
+    };
+    
+    // 转换为JSON字符串
+    const configJson = JSON.stringify(config, null, 2);
+    
+    // 使用Clipboard API复制到剪贴板
+    navigator.clipboard.writeText(configJson).then(() => {
+      ElMessage.success('CSS选择器配置已复制到剪贴板！');
+      console.log('复制的配置:', config);
+    }).catch(err => {
+      console.error('复制失败:', err);
+      // 降级方案：使用document.execCommand
+      const textArea = document.createElement('textarea');
+      textArea.value = configJson;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      ElMessage.success('CSS选择器配置已复制到剪贴板！');
+    });
+  } catch (error) {
+    console.error('复制配置时出错:', error);
+    ElMessage.error('复制失败，请手动复制');
+  }
+};
+
+// 一键同步到添加表单
+const handleSyncToAddForm = (row) => {
+  try {
+    // 将选中的CSS选择器配置同步到添加表单
+    Object.assign(cssSelectorDialog.formData, {
+      cssSelectorGroup: row.cssSelectorGroup || '',
+      dateCssSelector: row.dateCssSelector || '',
+      hyperLinkCssSelector: row.hyperLinkCssSelector || '',
+      datePattern: row.datePattern || '',
+      enabled: row.enabled || 'ON'
+    });
+    
+    // 滚动到添加表单区域
+    const addFormCard = document.querySelector('.add-css-selector-card');
+    if (addFormCard) {
+      addFormCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    
+    ElMessage.success('已同步到添加表单！您可以微调后添加新配置。');
+    
+    // 可选：自动聚焦到第一个输入框
+    setTimeout(() => {
+      const firstInput = document.querySelector('.add-css-selector-card .el-input__inner');
+      if (firstInput) {
+        firstInput.focus();
+      }
+    }, 300);
+  } catch (error) {
+    console.error('同步到添加表单时出错:', error);
+    ElMessage.error('同步失败');
+  }
+};
+
+// 一键粘贴CSS选择器配置
+const handlePasteCssSelectorConfig = async () => {
+  try {
+    // 从剪贴板读取文本
+    const clipboardText = await navigator.clipboard.readText();
+    
+    if (!clipboardText || clipboardText.trim() === '') {
+      ElMessage.warning('剪贴板为空或无效');
+      return;
+    }
+    
+    try {
+      // 尝试解析JSON
+      const config = JSON.parse(clipboardText);
+      
+      // 验证配置结构
+      if (typeof config !== 'object' || config === null) {
+        throw new Error('无效的配置格式');
+      }
+      
+      // 更新表单数据（只更新存在的字段）
+      const updatedData = {};
+      if (config.cssSelectorGroup !== undefined) {
+        updatedData.cssSelectorGroup = config.cssSelectorGroup;
+      }
+      if (config.dateCssSelector !== undefined) {
+        updatedData.dateCssSelector = config.dateCssSelector;
+      }
+      if (config.hyperLinkCssSelector !== undefined) {
+        updatedData.hyperLinkCssSelector = config.hyperLinkCssSelector;
+      }
+      if (config.datePattern !== undefined) {
+        updatedData.datePattern = config.datePattern;
+      }
+      if (config.enabled !== undefined) {
+        updatedData.enabled = config.enabled;
+      }
+      
+      Object.assign(cssSelectorDialog.formData, updatedData);
+      
+      ElMessage.success('配置已从剪贴板粘贴！请检查并微调。');
+      
+      // 自动聚焦到第一个输入框
+      setTimeout(() => {
+        const firstInput = document.querySelector('.add-css-selector-card .el-input__inner');
+        if (firstInput) {
+          firstInput.focus();
+        }
+      }, 100);
+      
+    } catch (jsonError) {
+      // 如果不是JSON，尝试按行解析
+      console.log('不是JSON格式，尝试按行解析:', jsonError);
+      
+      // 简单的文本解析：按行查找关键词
+      const lines = clipboardText.split('\n');
+      const config = {};
+      
+      lines.forEach(line => {
+        const trimmed = line.trim();
+        if (trimmed.includes('cssSelectorGroup') || trimmed.includes('选择器组')) {
+          const value = trimmed.split(':')[1]?.trim().replace(/[",]/g, '');
+          if (value) config.cssSelectorGroup = value;
+        } else if (trimmed.includes('dateCssSelector') || trimmed.includes('日期选择器')) {
+          const value = trimmed.split(':')[1]?.trim().replace(/[",]/g, '');
+          if (value) config.dateCssSelector = value;
+        } else if (trimmed.includes('hyperLinkCssSelector') || trimmed.includes('超链接选择器')) {
+          const value = trimmed.split(':')[1]?.trim().replace(/[",]/g, '');
+          if (value) config.hyperLinkCssSelector = value;
+        } else if (trimmed.includes('datePattern') || trimmed.includes('日期匹配规则')) {
+          const value = trimmed.split(':')[1]?.trim().replace(/[",]/g, '');
+          if (value) config.datePattern = value;
+        } else if (trimmed.includes('enabled') || trimmed.includes('启用状态')) {
+          const value = trimmed.split(':')[1]?.trim().replace(/[",]/g, '');
+          if (value) config.enabled = value.toUpperCase() === 'OFF' ? 'OFF' : 'ON';
+        }
+      });
+      
+      // 如果有找到任何配置，更新表单
+      if (Object.keys(config).length > 0) {
+        Object.assign(cssSelectorDialog.formData, config);
+        ElMessage.success('配置已从文本粘贴！请检查并微调。');
+      } else {
+        ElMessage.warning('无法识别剪贴板中的配置格式');
+      }
+    }
+    
+  } catch (error) {
+    console.error('粘贴配置时出错:', error);
+    
+    // 降级方案：使用prompt让用户手动输入
+    try {
+      const userInput = prompt('无法自动读取剪贴板，请手动粘贴配置JSON:');
+      if (userInput) {
+        const config = JSON.parse(userInput);
+        Object.assign(cssSelectorDialog.formData, {
+          cssSelectorGroup: config.cssSelectorGroup || '',
+          dateCssSelector: config.dateCssSelector || '',
+          hyperLinkCssSelector: config.hyperLinkCssSelector || '',
+          datePattern: config.datePattern || '',
+          enabled: config.enabled || 'ON'
+        });
+        ElMessage.success('配置已粘贴！');
+      }
+    } catch (promptError) {
+      ElMessage.error('粘贴失败，请手动填写表单');
+    }
+  }
+};
+
 const handleCssSelectorEditSubmit = async () => {
   try {
     await cssSelectorEditFormRef.value.validate();
@@ -1252,8 +1438,12 @@ const handleCssSelectorEditSubmit = async () => {
 
 const truncateText = (text, maxLength) => {
   if (!text) return '';
-  if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength) + '...';
+  
+  // 清理HTML标签
+  let cleanText = text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  
+  if (cleanText.length <= maxLength) return cleanText;
+  return cleanText.substring(0, maxLength) + '...';
 };
 
 const formatDate = (dateString) => {
@@ -1556,6 +1746,52 @@ const getLanguageGroups = computed(() => {
 
 .css-selector-dialog .el-row {
   margin-bottom: 0;
+}
+
+/* 按钮组样式 */
+.css-selector-dialog .action-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.css-selector-dialog .el-form-item .el-button + .el-button {
+  margin-left: 10px;
+}
+
+/* 添加表单按钮容器 */
+.add-css-selector-card .el-form-item:last-child {
+  margin-bottom: 0;
+  display: flex;
+  gap: 10px;
+}
+
+/* 对话框底部按钮 */
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .css-selector-dialog .action-buttons {
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .css-selector-dialog .action-buttons .el-button {
+    width: 100%;
+  }
+  
+  .add-css-selector-card .el-form-item:last-child {
+    flex-direction: column;
+  }
+  
+  .add-css-selector-card .el-form-item:last-child .el-button {
+    width: 100%;
+    margin-left: 0 !important;
+  }
 }
 
 @media (max-width: 768px) {

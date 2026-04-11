@@ -54,7 +54,7 @@ public class JsoupExtractor {
                                 }
                                 // 首先检查是否有自定义的日期匹配规则
                                 String datePattern = cssSelectorLinkRelation.getDatePattern();
-                                if (datePattern != null && !datePattern.trim().isEmpty()) {
+                                if (datePattern != null && !datePattern.trim().isEmpty() && hyperlink.getDate() == null) {
                                     try {
                                         Date publishDate = DateUtils.parseDate(date.text().trim(), datePattern);
                                         hyperlink.setDate(publishDate);

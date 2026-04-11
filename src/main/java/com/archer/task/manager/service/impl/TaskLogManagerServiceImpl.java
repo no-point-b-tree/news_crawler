@@ -144,7 +144,15 @@ public class TaskLogManagerServiceImpl extends ServiceImpl<TaskLogMapper, TaskLo
             WebsiteNewsVO vo = new WebsiteNewsVO();
             vo.setId(news.getId());
             vo.setTitle(news.getTitle());
-            vo.setContent(news.getContent());
+            
+            // 优先使用tikaContent（紧凑型文本），如果为空则使用原始content
+            if (news.getTikaContent() != null && !news.getTikaContent().trim().isEmpty()) {
+                vo.setContent(news.getTikaContent());
+            } else {
+                // 如果tikaContent为空，使用原始content
+                vo.setContent(news.getContent());
+            }
+            
             vo.setPublishTime(news.getPublishTime());
             vo.setCreateTime(news.getCreateTime());
             vo.setSourceUrl(news.getSourceUrl());
