@@ -5,6 +5,7 @@ import com.archer.task.entity.Article;
 import com.archer.task.entity.News;
 import com.archer.task.mapper.NewsMapper;
 import com.archer.task.service.impl.LatestSpiderTaskServiceImpl;
+import com.archer.task.util.TikaUtil;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 
@@ -49,6 +50,28 @@ public class SingleRssTaskService implements Runnable {
                 News news = new News();
                 news.setTitle(article.getTitle());
                 news.setContent(article.getContent());
+                
+                // 使用TikaUtil将HTML内容转换为紧凑型纯文本
+                if (article.getContent() != null && !article.getContent().trim().isEmpty()) {
+                    try {
+                        String tikaText = TikaUtil.htmlToCompactText(article.getContent());
+                        news.setTikaContent(tikaText);
+                    } catch (Exception e) {
+                        log.warn("Failed to convert HTML to compact text using Tika for RSS URL: {}", article.getUrl(), e);
+                        // 如果Tika处理失败，使用简化版本
+                        try {
+                            String fallbackText = TikaUtil.htmlToText(article.getContent());
+                            news.setTikaContent(TikaUtil.toCompactText(fallbackText));
+                        } catch (Exception e2) {
+                            log.warn("Fallback Tika conversion also failed, using basic regex cleanup for RSS URL: {}", article.getUrl(), e2);
+                            // 最后的回退：基本正则清理
+                            news.setTikaContent(TikaUtil.toCompactText(
+                                article.getContent().replaceAll("<[^>]+>", " ")
+                            ));
+                        }
+                    }
+                }
+                
                 news.setUrl(article.getUrl());
                 news.setIsDelete("N");
                 news.setSource("rss");

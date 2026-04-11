@@ -14,6 +14,8 @@ public interface NewsLinkManagerService extends IService<NewsLink> {
     Page<com.archer.task.manager.vo.NewsLinkWithCssCountVO> pageNewsLinksWithCssCount(String keyword, List<String> langs, Integer page, Integer size);
 
     List<String> getAllLanguages();
+    
+    List<com.archer.task.manager.controller.LocaleController.LocaleInfo> getLocaleLanguages();
 
     boolean createNewsLink(NewsLink newsLink);
 

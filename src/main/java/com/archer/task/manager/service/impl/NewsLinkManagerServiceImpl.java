@@ -24,9 +24,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -135,6 +135,31 @@ public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, News
                 .map(NewsLink::getLang)
                 .distinct()
                 .toList();
+    }
+
+    @Override
+    public List<com.archer.task.manager.controller.LocaleController.LocaleInfo> getLocaleLanguages() {
+        // 获取Java Locale支持的语言
+        Locale[] availableLocales = Locale.getAvailableLocales();
+        
+        // 提取唯一的语言代码和显示名称
+        Map<String, String> languageMap = new TreeMap<>();
+        for (Locale locale : availableLocales) {
+            String language = locale.getLanguage();
+            String displayLanguage = locale.getDisplayLanguage(Locale.ENGLISH);
+            
+            if (!language.isEmpty() && !displayLanguage.isEmpty()) {
+                languageMap.put(language, displayLanguage);
+            }
+        }
+        
+        // 转换为LocaleInfo列表
+        return languageMap.entrySet().stream()
+                .map(entry -> new com.archer.task.manager.controller.LocaleController.LocaleInfo(
+                        entry.getKey(), 
+                        entry.getValue()))
+                .sorted(Comparator.comparing(com.archer.task.manager.controller.LocaleController.LocaleInfo::getDisplayName))
+                .collect(Collectors.toList());
     }
 
     @Override

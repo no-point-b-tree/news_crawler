@@ -24,6 +24,13 @@ export const newsLinkApi = {
     });
   },
 
+  getLocaleLanguages() {
+    return request({
+      url: '/manager/news-links/locale-languages',
+      method: 'get'
+    });
+  },
+
   createNewsLink(data) {
     return request({
       url: '/manager/news-links',

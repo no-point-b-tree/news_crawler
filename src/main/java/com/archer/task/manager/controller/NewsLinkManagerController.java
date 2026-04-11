@@ -53,6 +53,15 @@ public class NewsLinkManagerController {
         return ResponseEntity.ok(languages);
     }
 
+    /**
+     * 获取Java Locale支持的语言列表
+     */
+    @GetMapping("/locale-languages")
+    public ResponseEntity<List<com.archer.task.manager.controller.LocaleController.LocaleInfo>> getLocaleLanguages() {
+        List<com.archer.task.manager.controller.LocaleController.LocaleInfo> languages = newsLinkManagerService.getLocaleLanguages();
+        return ResponseEntity.ok(languages);
+    }
+
     @PostMapping
     public ResponseEntity<Boolean> createNewsLink(@RequestBody NewsLink newsLink) {
         boolean result = newsLinkManagerService.createNewsLink(newsLink);

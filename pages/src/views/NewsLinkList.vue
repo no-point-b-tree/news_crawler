@@ -24,13 +24,14 @@
                          multiple
                          placeholder="请选择语言"
                          clearable
+                         filterable
                          style="width: 100%"
                        >
                          <el-option
-                           v-for="lang in languages"
-                           :key="lang"
-                           :label="lang"
-                           :value="lang"
+                           v-for="lang in getAvailableLanguages"
+                           :key="lang.code"
+                           :label="`${lang.displayName} (${lang.code})`"
+                           :value="lang.code"
                          />
                        </el-select>
                      </el-form-item>
@@ -69,9 +70,7 @@
                    <el-button type="danger" @click="handleBatchDelete" :disabled="selection.length === 0">
                      批量删除
                    </el-button>
-                   <el-button type="warning" @click="handleBatchViewNoCss" :disabled="getWebsitesWithoutCssCount.value === 0">
-                     查看未配置CSS
-                   </el-button>
+
                  </div>
                <div class="css-stats" v-if="tableData.length > 0">
                  <span class="stat-item" v-if="searchParams.cssFilter">
@@ -85,11 +84,23 @@
                  </span>
                  <span class="stat-item">
                    <span class="stat-label">已配置CSS:</span>
-                   <span class="stat-value success">{{ getWebsitesWithCssCount }}</span>
+                   <span 
+                     class="stat-value success clickable" 
+                     @click="handleBatchViewWithCss"
+                     :title="getWebsitesWithCssCount.value > 0 ? '点击查看已配置CSS的网站' : '没有已配置CSS的网站'"
+                   >
+                     {{ getWebsitesWithCssCount }}
+                   </span>
                  </span>
                  <span class="stat-item">
                    <span class="stat-label">未配置CSS:</span>
-                   <span class="stat-value danger">{{ getWebsitesWithoutCssCount }}</span>
+                   <span 
+                     class="stat-value danger clickable" 
+                     @click="handleBatchViewNoCss"
+                     :title="getWebsitesWithoutCssCount.value > 0 ? '点击查看未配置CSS的网站' : '没有未配置CSS的网站'"
+                   >
+                     {{ getWebsitesWithoutCssCount }}
+                   </span>
                  </span>
                  <span class="stat-item">
                    <span class="stat-label">CSS总数:</span>
@@ -175,22 +186,11 @@
             {{ formatDate(row.createTime) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" min-width="320" fixed="right">
+        <el-table-column label="操作" min-width="240" fixed="right">
           <template #default="{ row }">
             <div class="action-buttons">
               <el-button type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
               <el-button type="success" size="small" @click="handleStartTask(row)">执行任务</el-button>
-              <el-button 
-                type="info" 
-                size="small" 
-                @click="handleViewCssSelectors(row)"
-                :class="{ 'warning-btn': !row.cssSelectorCount || row.cssSelectorCount === 0 }"
-              >
-                CSS选择器
-                <span v-if="row.cssSelectorCount" class="css-badge">
-                  {{ row.cssSelectorCount }}
-                </span>
-              </el-button>
               <el-button type="danger" size="small" @click="handleDelete(row)">删除</el-button>
             </div>
           </template>
@@ -272,14 +272,22 @@
             placeholder="请选择语言"
             style="width: 100%"
             clearable
+            filterable
           >
-            <el-option
-              v-for="lang in languages"
-              :key="lang"
-              :label="lang"
-              :value="lang"
-            />
+            <el-option-group
+              v-for="group in getLanguageGroups"
+              :key="group.label"
+              :label="group.label"
+            >
+              <el-option
+                v-for="lang in group.options"
+                :key="lang.code"
+                :label="`${lang.displayName} (${lang.code})`"
+                :value="lang.code"
+              />
+            </el-option-group>
           </el-select>
+          <div class="form-tip">使用Java Locale支持的语言代码</div>
         </el-form-item>
       </el-form>
 
@@ -552,6 +560,7 @@ const tableData = ref([]);
 const loading = ref(false);
 const selection = ref([]);
 const languages = ref([]);
+const localeLanguages = ref([]); // Java Locale支持的语言
 const pagination = reactive({
   current: 1,
   size: 10,
@@ -663,7 +672,25 @@ const formRules = {
     { min: 1, max: 100, message: '长度在 1 到 100 个字符', trigger: 'blur' }
   ],
   lang: [
-    { required: true, message: '请选择语言', trigger: 'change' }
+    { required: true, message: '请选择语言', trigger: 'change' },
+    { 
+      validator: (rule, value, callback) => {
+        if (!value) {
+          callback(new Error('请选择语言'));
+        } else if (value.length > 10) {
+          callback(new Error('语言代码长度不能超过10个字符'));
+        } else {
+          // 验证是否是有效的语言代码
+          const isValid = getAvailableLanguages.value.some(lang => lang.code === value);
+          if (!isValid) {
+            callback(new Error('请选择有效的语言代码'));
+          } else {
+            callback();
+          }
+        }
+      },
+      trigger: 'change'
+    }
   ]
 };
 
@@ -671,6 +698,7 @@ const formRef = ref();
 
 onMounted(() => {
   fetchLanguages();
+  fetchLocaleLanguages();
   fetchData();
 });
 
@@ -680,6 +708,26 @@ const fetchLanguages = async () => {
     languages.value = res;
   } catch (error) {
     console.error('获取语言列表失败:', error);
+  }
+};
+
+const fetchLocaleLanguages = async () => {
+  try {
+    const res = await newsLinkApi.getLocaleLanguages();
+    localeLanguages.value = res;
+  } catch (error) {
+    console.error('获取Locale语言列表失败:', error);
+    // 如果获取失败，使用默认的常用语言
+    localeLanguages.value = [
+      { code: 'zh', displayName: 'Chinese' },
+      { code: 'en', displayName: 'English' },
+      { code: 'ja', displayName: 'Japanese' },
+      { code: 'ko', displayName: 'Korean' },
+      { code: 'fr', displayName: 'French' },
+      { code: 'de', displayName: 'German' },
+      { code: 'es', displayName: 'Spanish' },
+      { code: 'ru', displayName: 'Russian' }
+    ];
   }
 };
 
@@ -1019,6 +1067,36 @@ const handleBatchViewNoCss = () => {
   });
 };
 
+const handleBatchViewWithCss = () => {
+  const withCssWebsites = tableData.value.filter(item => item.cssSelectorCount && item.cssSelectorCount > 0);
+  if (withCssWebsites.length === 0) {
+    ElMessage.info('没有已配置CSS选择器的网站');
+    return;
+  }
+  
+  ElMessageBox.confirm(
+    `发现 ${withCssWebsites.length} 个网站已配置CSS选择器，是否批量查看？`,
+    '批量查看已配置CSS',
+    {
+      confirmButtonText: '查看',
+      cancelButtonText: '取消',
+      type: 'info',
+      showClose: false
+    }
+  ).then(() => {
+    ElMessage.info(`共 ${withCssWebsites.length} 个网站已配置CSS选择器`);
+    
+    // 逐个打开
+    withCssWebsites.forEach((website, index) => {
+      setTimeout(() => {
+        handleViewCssSelectors(website);
+      }, index * 500);
+    });
+  }).catch(() => {
+    // 用户取消
+  });
+};
+
 const handleViewCssSelectors = async (row) => {
   cssSelectorDialog.visible = true;
   cssSelectorDialog.url = row.url;
@@ -1217,6 +1295,74 @@ const getWebsitesWithoutCssCount = computed(() => {
 const getTotalCssCount = computed(() => {
   return tableData.value.reduce((total, item) => total + (item.cssSelectorCount || 0), 0);
 });
+
+// 获取可用的语言列表（合并数据库中的语言和Locale支持的语言）
+const getAvailableLanguages = computed(() => {
+  const allLanguages = new Map();
+  
+  // 添加Locale支持的语言
+  localeLanguages.value.forEach(lang => {
+    allLanguages.set(lang.code, {
+      code: lang.code,
+      displayName: lang.displayName,
+      source: 'locale'
+    });
+  });
+  
+  // 添加数据库中已有的语言（如果不在Locale列表中）
+  languages.value.forEach(code => {
+    if (!allLanguages.has(code)) {
+      allLanguages.set(code, {
+        code: code,
+        displayName: code,
+        source: 'database'
+      });
+    }
+  });
+  
+  // 转换为数组并按显示名称排序
+  return Array.from(allLanguages.values())
+    .sort((a, b) => a.displayName.localeCompare(b.displayName));
+});
+
+// 获取分组的语言列表（用于表单选择）
+const getLanguageGroups = computed(() => {
+  const groups = [
+    {
+      label: '常用语言',
+      options: []
+    },
+    {
+      label: '所有语言',
+      options: []
+    }
+  ];
+  
+  // 定义常用语言
+  const commonLanguageCodes = ['zh', 'en', 'ja', 'ko', 'fr', 'de', 'es', 'ru', 'ar', 'pt'];
+  
+  // 获取所有语言
+  const allLanguages = getAvailableLanguages.value;
+  
+  // 分离常用语言和其他语言
+  allLanguages.forEach(lang => {
+    if (commonLanguageCodes.includes(lang.code)) {
+      groups[0].options.push(lang);
+    } else {
+      groups[1].options.push(lang);
+    }
+  });
+  
+  // 如果常用语言组为空，只显示所有语言组
+  if (groups[0].options.length === 0) {
+    return [{
+      label: '所有语言',
+      options: allLanguages
+    }];
+  }
+  
+  return groups;
+});
 </script>
 
 <style scoped>
@@ -1298,6 +1444,24 @@ const getTotalCssCount = computed(() => {
 .stat-value.danger {
   background-color: #fef0f0;
   color: #f56c6c;
+}
+
+.stat-value.clickable {
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.stat-value.clickable:hover {
+  opacity: 0.8;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.form-tip {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 4px;
+  line-height: 1.4;
 }
 
 .action-buttons {
@@ -1449,31 +1613,7 @@ const getTotalCssCount = computed(() => {
   color: #f56c6c;
 }
 
-/* CSS选择器按钮样式 */
-.warning-btn {
-  background-color: #f56c6c !important;
-  border-color: #f56c6c !important;
-  color: white !important;
-}
 
-.warning-btn:hover {
-  background-color: #e65c5c !important;
-  border-color: #e65c5c !important;
-}
-
-.css-badge {
-  display: inline-block;
-  min-width: 18px;
-  height: 18px;
-  line-height: 18px;
-  text-align: center;
-  background-color: #409eff;
-  color: white;
-  border-radius: 9px;
-  font-size: 12px;
-  margin-left: 4px;
-  padding: 0 4px;
-}
 
 /* 鼠标悬停提示样式 */
 .el-tooltip__popper {

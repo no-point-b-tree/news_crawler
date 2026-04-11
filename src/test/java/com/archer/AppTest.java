@@ -1,6 +1,7 @@
 package com.archer;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.*;
@@ -14,9 +15,11 @@ import com.archer.task.mapper.NewsLinkMapper;
 import com.archer.task.service.LinkManagerService;
 import com.archer.task.service.TaskService;
 import com.archer.task.service.impl.LatestSpiderTaskServiceImpl;
+import com.archer.task.util.TikaUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.apache.commons.lang3.time.DateFormatUtils;
 import org.apache.commons.lang3.time.DateUtils;
@@ -60,62 +63,10 @@ class AppTest {
 
     @Test
     void test() throws IOException {
-        QueryWrapper<NewsLink> wrapper = new QueryWrapper<>();
-        wrapper.eq("is_delete", "N");
-        List<NewsLink> newsLinks = newsLinkMapper.selectList(wrapper);
-        CountDownLatch countDownLatch = new CountDownLatch(newsLinks.size());
-        CopyOnWriteArrayList<News> list = new CopyOnWriteArrayList<>();
-        for (NewsLink newsLink : newsLinks) {
-            String url = newsLink.getUrl();
-            LatestSpiderTaskServiceImpl latestSpiderTaskService = new LatestSpiderTaskServiceImpl();
-            latestSpiderTaskService.getArticleContent(url);
-            Task task = new Task(list, countDownLatch, url, latestSpiderTaskService);
-            threadPool.execute(task);
-        }
-        countDownLatch.countDown();
-        List<Map<String, Object>> jsonList = new ArrayList<>();
-        for (News news : list) {
-            Map<String, Object> map = new HashMap<>();
-            map.put("url", news.getUrl());
-            map.put("content", news.getContent());
-            jsonList.add(map);
-        }
-        new ObjectMapper().writeValue(new File("D:/tmp/url_index.json"), jsonList);
+          File f =   new File("D:/tmp/demo.html");
+        System.out.println(        TikaUtil.htmlToCompactText(FileUtils.readFileToString(f, StandardCharsets.UTF_8)));
     }
 
-    class Task implements Runnable {
-
-        private final CopyOnWriteArrayList<News> list;
-
-        private final CountDownLatch countDownLatch;
-
-        private final String url;
-
-        private final LatestSpiderTaskServiceImpl latestSpiderTaskService;
-
-        public Task(CopyOnWriteArrayList<News> list, CountDownLatch countDownLatch, String url, LatestSpiderTaskServiceImpl latestSpiderTaskService) {
-            this.list = list;
-            this.countDownLatch = countDownLatch;
-            this.url = url;
-            this.latestSpiderTaskService = latestSpiderTaskService;
-        }
-
-        @Override
-        public void run() {
-            try {
-                Article article = latestSpiderTaskService.getArticleContent(url);
-                News news = new News();
-                news.setTitle(article.getTitle());
-                news.setContent(article.getContent());
-                news.setUrl(url);
-                list.add(news);
-            } catch (Exception e) {
-                log.error("爬取任务失败", e);
-            } finally {
-                countDownLatch.countDown();
-            }
-        }
-    }
 
 
 }
