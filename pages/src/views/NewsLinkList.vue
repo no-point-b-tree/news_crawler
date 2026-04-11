@@ -17,43 +17,88 @@
                       />
                     </el-form-item>
                   </el-col>
-                  <el-col :xs="24" :sm="12" :md="8" :lg="6">
-                    <el-form-item label="语言">
-                      <el-select
-                        v-model="searchParams.langs"
-                        multiple
-                        placeholder="请选择语言"
-                        clearable
-                        style="width: 100%"
-                      >
-                        <el-option
-                          v-for="lang in languages"
-                          :key="lang"
-                          :label="lang"
-                          :value="lang"
-                        />
-                      </el-select>
-                    </el-form-item>
-                  </el-col>
-                  <el-col :xs="24" :sm="24" :md="8" :lg="12">
-                    <el-form-item>
-                      <el-button type="primary" @click="handleSearch">查询</el-button>
-                      <el-button @click="handleReset">重置</el-button>
-                    </el-form-item>
-                  </el-col>
+                   <el-col :xs="24" :sm="12" :md="8" :lg="6">
+                     <el-form-item label="语言">
+                       <el-select
+                         v-model="searchParams.langs"
+                         multiple
+                         placeholder="请选择语言"
+                         clearable
+                         style="width: 100%"
+                       >
+                         <el-option
+                           v-for="lang in languages"
+                           :key="lang"
+                           :label="lang"
+                           :value="lang"
+                         />
+                       </el-select>
+                     </el-form-item>
+                   </el-col>
+                   <el-col :xs="24" :sm="12" :md="8" :lg="6">
+                     <el-form-item label="CSS选择器">
+                       <el-select
+                         v-model="searchParams.cssFilter"
+                         placeholder="筛选CSS选择器"
+                         clearable
+                         style="width: 100%"
+                       >
+                         <el-option label="未配置" value="no_css" />
+                         <el-option label="有配置" value="has_css" />
+                         <el-option label="有启用的" value="has_enabled" />
+                         <el-option label="全部禁用" value="all_disabled" />
+                       </el-select>
+                     </el-form-item>
+                   </el-col>
+                   <el-col :xs="24" :sm="24" :md="8" :lg="12">
+                     <el-form-item>
+                       <el-button type="primary" @click="handleSearch">查询</el-button>
+                       <el-button @click="handleReset">重置</el-button>
+                     </el-form-item>
+                   </el-col>
                 </el-row>
               </el-form>
             </el-card>
           </el-col>
 
-          <el-col :span="24">
-            <el-card class="action-card">
-              <el-button type="primary" @click="handleAdd">新增</el-button>
-              <el-button type="danger" @click="handleBatchDelete" :disabled="selection.length === 0">
-                批量删除
-              </el-button>
-            </el-card>
-          </el-col>
+           <el-col :span="24">
+             <el-card class="action-card">
+               <div class="action-header">
+                 <div class="action-buttons-left">
+                   <el-button type="primary" @click="handleAdd">新增</el-button>
+                   <el-button type="danger" @click="handleBatchDelete" :disabled="selection.length === 0">
+                     批量删除
+                   </el-button>
+                   <el-button type="warning" @click="handleBatchViewNoCss" :disabled="getWebsitesWithoutCssCount.value === 0">
+                     查看未配置CSS
+                   </el-button>
+                 </div>
+               <div class="css-stats" v-if="tableData.length > 0">
+                 <span class="stat-item" v-if="searchParams.cssFilter">
+                   <el-tag type="info" size="small">
+                     {{ getFilterLabel(searchParams.cssFilter) }}
+                   </el-tag>
+                 </span>
+                 <span class="stat-item">
+                   <span class="stat-label">当前页:</span>
+                   <span class="stat-value">{{ tableData.length }}</span>
+                 </span>
+                 <span class="stat-item">
+                   <span class="stat-label">已配置CSS:</span>
+                   <span class="stat-value success">{{ getWebsitesWithCssCount }}</span>
+                 </span>
+                 <span class="stat-item">
+                   <span class="stat-label">未配置CSS:</span>
+                   <span class="stat-value danger">{{ getWebsitesWithoutCssCount }}</span>
+                 </span>
+                 <span class="stat-item">
+                   <span class="stat-label">CSS总数:</span>
+                   <span class="stat-value">{{ getTotalCssCount }}</span>
+                 </span>
+               </div>
+               </div>
+             </el-card>
+           </el-col>
 
           <el-col :span="24">
             <el-card>
@@ -89,37 +134,92 @@
             <span class="text-truncate" :title="row.domain">{{ truncateText(row.domain, 15) }}</span>
           </template>
         </el-table-column>
+        <el-table-column prop="cssSelectorCount" label="CSS选择器" min-width="120" sortable>
+          <template #header>
+            <div style="display: flex; align-items: center; gap: 5px;">
+              <span>CSS选择器</span>
+              <el-tooltip content="点击数字可查看详情" placement="top">
+                <el-icon><InfoFilled /></el-icon>
+              </el-tooltip>
+            </div>
+          </template>
+          <template #default="{ row }">
+            <div class="css-selector-count" @click="handleViewCssSelectors(row)">
+              <el-tooltip 
+                :content="`总数: ${row.cssSelectorCount || 0}, 启用: ${row.enabledCssSelectorCount || 0}, 禁用: ${row.disabledCssSelectorCount || 0}\n点击查看详情`" 
+                placement="top"
+              >
+                <div class="count-container" style="cursor: pointer;">
+                  <el-tag 
+                    :type="getCssCountType(row)" 
+                    size="small"
+                    class="count-tag"
+                  >
+                    {{ row.cssSelectorCount || 0 }}
+                  </el-tag>
+                  <span class="count-details">
+                    <span class="enabled-count" v-if="row.enabledCssSelectorCount > 0">
+                      {{ row.enabledCssSelectorCount }}启
+                    </span>
+                    <span class="disabled-count" v-if="row.disabledCssSelectorCount > 0">
+                      {{ row.disabledCssSelectorCount }}禁
+                    </span>
+                  </span>
+                </div>
+              </el-tooltip>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column prop="createTime" label="创建时间" min-width="140">
           <template #default="{ row }">
             {{ formatDate(row.createTime) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" min-width="280" fixed="right">
+        <el-table-column label="操作" min-width="320" fixed="right">
           <template #default="{ row }">
             <div class="action-buttons">
               <el-button type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
               <el-button type="success" size="small" @click="handleStartTask(row)">执行任务</el-button>
-              <el-button type="info" size="small" @click="handleViewCssSelectors(row)">CSS选择器</el-button>
+              <el-button 
+                type="info" 
+                size="small" 
+                @click="handleViewCssSelectors(row)"
+                :class="{ 'warning-btn': !row.cssSelectorCount || row.cssSelectorCount === 0 }"
+              >
+                CSS选择器
+                <span v-if="row.cssSelectorCount" class="css-badge">
+                  {{ row.cssSelectorCount }}
+                </span>
+              </el-button>
               <el-button type="danger" size="small" @click="handleDelete(row)">删除</el-button>
             </div>
           </template>
         </el-table-column>
               </el-table>
 
-              <div class="pagination" v-if="pagination.total > 0">
-                <el-pagination
-                  v-model:current-page="pagination.current"
-                  v-model:page-size="pagination.size"
-                  :total="pagination.total"
-                  :page-sizes="[10, 20, 50, 100]"
-                  layout="total, sizes, prev, pager, next, jumper"
-                  @size-change="handleSizeChange"
-                  @current-change="handlePageChange"
-                />
-              </div>
-              <div class="pagination" v-else>
-                <div class="no-data">暂无数据</div>
-              </div>
+               <div class="pagination" v-if="pagination.total > 0">
+                 <div class="pagination-info">
+                   <span v-if="searchParams.cssFilter && tableData.length === 0" class="filter-empty-tip">
+                     <el-icon><Warning /></el-icon>
+                     当前筛选条件下无数据，请调整筛选条件
+                   </span>
+                   <span v-else-if="searchParams.cssFilter" class="filter-tip">
+                     当前显示筛选结果 ({{ tableData.length }} 条)
+                   </span>
+                 </div>
+                 <el-pagination
+                   v-model:current-page="pagination.current"
+                   v-model:page-size="pagination.size"
+                   :total="pagination.total"
+                   :page-sizes="[10, 20, 50, 100]"
+                   layout="total, sizes, prev, pager, next, jumper"
+                   @size-change="handleSizeChange"
+                   @current-change="handlePageChange"
+                 />
+               </div>
+               <div class="pagination" v-else>
+                 <div class="no-data">暂无数据</div>
+               </div>
             </el-card>
           </el-col>
         </el-row>
@@ -437,13 +537,15 @@
  </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue';
+import { ref, reactive, onMounted, watch, computed } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { InfoFilled, Warning } from '@element-plus/icons-vue';
 import { newsLinkApi } from '@/api';
 
 const searchParams = reactive({
   keyword: '',
-  langs: []
+  langs: [],
+  cssFilter: '' // 新增：CSS选择器筛选条件
 });
 
 const tableData = ref([]);
@@ -584,19 +686,92 @@ const fetchLanguages = async () => {
 const fetchData = async () => {
   loading.value = true;
   try {
+    // 先获取所有数据（因为后端不支持CSS筛选）
     const params = {
-      ...searchParams,
+      keyword: searchParams.keyword,
+      langs: searchParams.langs,
       page: pagination.current,
       size: pagination.size
     };
     console.log('请求参数:', params);
-    const res = await newsLinkApi.pageNewsLinks(params);
+    
+    // 使用新的接口获取包含CSS选择器数量的数据
+    const res = await newsLinkApi.pageNewsLinksWithCssCount(params);
     console.log('API响应:', res);
-    tableData.value = res.records || [];
+    
+    let filteredRecords = res.records || [];
+    
+    // 客户端筛选CSS选择器
+    if (searchParams.cssFilter) {
+      filteredRecords = filteredRecords.filter(item => {
+        switch (searchParams.cssFilter) {
+          case 'no_css':
+            return !item.cssSelectorCount || item.cssSelectorCount === 0;
+          case 'has_css':
+            return item.cssSelectorCount && item.cssSelectorCount > 0;
+          case 'has_enabled':
+            return item.enabledCssSelectorCount && item.enabledCssSelectorCount > 0;
+          case 'all_disabled':
+            return item.cssSelectorCount && item.cssSelectorCount > 0 && 
+                   (!item.enabledCssSelectorCount || item.enabledCssSelectorCount === 0);
+          default:
+            return true;
+        }
+      });
+    }
+    
+    tableData.value = filteredRecords;
+    // 保持后端返回的总数，不修改为筛选后的数量
     pagination.total = res.total || 0;
-    console.log('分页数据:', { records: tableData.value.length, total: pagination.total });
+    
+    console.log('分页数据:', { 
+      records: tableData.value.length, 
+      total: pagination.total,
+      filtered: filteredRecords.length 
+    });
   } catch (error) {
     console.error('获取数据失败:', error);
+    // 如果新接口失败，回退到旧接口
+    try {
+      const params = {
+        keyword: searchParams.keyword,
+        langs: searchParams.langs,
+        page: pagination.current,
+        size: pagination.size
+      };
+      const res = await newsLinkApi.pageNewsLinks(params);
+      let filteredRecords = res.records || [];
+      
+      // 为旧接口数据添加默认的CSS选择器数量
+      filteredRecords.forEach(item => {
+        item.cssSelectorCount = 0;
+        item.enabledCssSelectorCount = 0;
+        item.disabledCssSelectorCount = 0;
+      });
+      
+      // 客户端筛选CSS选择器
+      if (searchParams.cssFilter) {
+        filteredRecords = filteredRecords.filter(item => {
+          switch (searchParams.cssFilter) {
+            case 'no_css':
+              return true; // 旧接口数据都没有CSS配置
+            case 'has_css':
+              return false; // 旧接口数据都没有CSS配置
+            case 'has_enabled':
+              return false; // 旧接口数据都没有启用的CSS
+            case 'all_disabled':
+              return false; // 旧接口数据都没有CSS配置
+            default:
+              return true;
+          }
+        });
+      }
+      
+      tableData.value = filteredRecords;
+      pagination.total = res.total || 0;
+    } catch (fallbackError) {
+      console.error('回退接口也失败:', fallbackError);
+    }
   } finally {
     loading.value = false;
   }
@@ -610,6 +785,7 @@ const handleSearch = () => {
 const handleReset = () => {
   searchParams.keyword = '';
   searchParams.langs = [];
+  searchParams.cssFilter = '';
   pagination.current = 1;
   fetchData();
 };
@@ -624,6 +800,11 @@ const handleSizeChange = (size) => {
   pagination.current = 1;
   fetchData();
 };
+
+// 监听CSS筛选条件变化，重置到第一页
+watch(() => searchParams.cssFilter, () => {
+  pagination.current = 1;
+});
 
 const handleSelectionChange = (val) => {
   selection.value = val;
@@ -806,6 +987,38 @@ const handleBatchDelete = async () => {
   }
 };
 
+const handleBatchViewNoCss = () => {
+  const noCssWebsites = tableData.value.filter(item => !item.cssSelectorCount || item.cssSelectorCount === 0);
+  if (noCssWebsites.length === 0) {
+    ElMessage.info('没有未配置CSS选择器的网站');
+    return;
+  }
+  
+  ElMessageBox.confirm(
+    `发现 ${noCssWebsites.length} 个网站未配置CSS选择器，是否批量查看？`,
+    '批量查看未配置CSS',
+    {
+      confirmButtonText: '查看',
+      cancelButtonText: '取消',
+      type: 'warning',
+      showClose: false
+    }
+  ).then(() => {
+    // 可以在这里实现批量查看逻辑，比如打开多个标签页
+    // 这里先简单提示
+    ElMessage.info(`共 ${noCssWebsites.length} 个网站需要配置CSS选择器`);
+    
+    // 可以逐个打开
+    noCssWebsites.forEach((website, index) => {
+      setTimeout(() => {
+        handleViewCssSelectors(website);
+      }, index * 500); // 间隔500ms打开，避免同时打开太多
+    });
+  }).catch(() => {
+    // 用户取消
+  });
+};
+
 const handleViewCssSelectors = async (row) => {
   cssSelectorDialog.visible = true;
   cssSelectorDialog.url = row.url;
@@ -970,6 +1183,40 @@ const formatDate = (dateString) => {
   const date = new Date(dateString);
   return date.toLocaleString('zh-CN');
 };
+
+const getCssCountType = (row) => {
+  if (!row.cssSelectorCount || row.cssSelectorCount === 0) {
+    return 'danger'; // 红色：没有配置CSS选择器
+  } else if (row.enabledCssSelectorCount === 0) {
+    return 'warning'; // 黄色：有配置但都禁用了
+  } else {
+    return 'success'; // 绿色：有启用的CSS选择器
+  }
+};
+
+// 获取筛选标签
+const getFilterLabel = (filterValue) => {
+  const filterMap = {
+    'no_css': '未配置CSS',
+    'has_css': '有CSS配置',
+    'has_enabled': '有启用的CSS',
+    'all_disabled': '全部禁用'
+  };
+  return filterMap[filterValue] || filterValue;
+};
+
+// 计算属性
+const getWebsitesWithCssCount = computed(() => {
+  return tableData.value.filter(item => item.cssSelectorCount && item.cssSelectorCount > 0).length;
+});
+
+const getWebsitesWithoutCssCount = computed(() => {
+  return tableData.value.filter(item => !item.cssSelectorCount || item.cssSelectorCount === 0).length;
+});
+
+const getTotalCssCount = computed(() => {
+  return tableData.value.reduce((total, item) => total + (item.cssSelectorCount || 0), 0);
+});
 </script>
 
 <style scoped>
@@ -1006,6 +1253,53 @@ const formatDate = (dateString) => {
   margin-bottom: 20px;
 }
 
+.action-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.action-buttons-left {
+  display: flex;
+  gap: 10px;
+}
+
+.css-stats {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 14px;
+}
+
+.stat-label {
+  color: #666;
+}
+
+.stat-value {
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background-color: #f5f5f5;
+}
+
+.stat-value.success {
+  background-color: #f0f9eb;
+  color: #67c23a;
+}
+
+.stat-value.danger {
+  background-color: #fef0f0;
+  color: #f56c6c;
+}
+
 .action-buttons {
   display: flex;
   flex-wrap: nowrap;
@@ -1028,11 +1322,40 @@ const formatDate = (dateString) => {
   margin-top: 20px;
   padding: 15px 0;
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   background-color: #fff;
   border-top: 1px solid #ebeef5;
   min-height: 60px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.pagination-info {
+  display: flex;
   align-items: center;
+  gap: 10px;
+}
+
+.filter-tip {
+  font-size: 14px;
+  color: #409eff;
+  background-color: #ecf5ff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #d9ecff;
+}
+
+.filter-empty-tip {
+  font-size: 14px;
+  color: #e6a23c;
+  background-color: #fdf6ec;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #faecd8;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .pagination .no-data {
@@ -1096,6 +1419,65 @@ const formatDate = (dateString) => {
 
 .url-link:hover {
   text-decoration: underline;
+}
+
+.css-selector-count .count-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.css-selector-count .count-tag {
+  min-width: 40px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.css-selector-count .count-details {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  color: #666;
+  line-height: 1.2;
+}
+
+.css-selector-count .enabled-count {
+  color: #67c23a;
+}
+
+.css-selector-count .disabled-count {
+  color: #f56c6c;
+}
+
+/* CSS选择器按钮样式 */
+.warning-btn {
+  background-color: #f56c6c !important;
+  border-color: #f56c6c !important;
+  color: white !important;
+}
+
+.warning-btn:hover {
+  background-color: #e65c5c !important;
+  border-color: #e65c5c !important;
+}
+
+.css-badge {
+  display: inline-block;
+  min-width: 18px;
+  height: 18px;
+  line-height: 18px;
+  text-align: center;
+  background-color: #409eff;
+  color: white;
+  border-radius: 9px;
+  font-size: 12px;
+  margin-left: 4px;
+  padding: 0 4px;
+}
+
+/* 鼠标悬停提示样式 */
+.el-tooltip__popper {
+  max-width: 300px;
 }
 
 @media (max-width: 1200px) {

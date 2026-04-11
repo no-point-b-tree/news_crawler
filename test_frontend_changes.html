@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>新闻链接管理页面CSS选择器数量功能演示</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        .demo-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .table-demo {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        .table-demo th, .table-demo td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .table-demo th {
+            background-color: #f5f5f5;
+        }
+        .css-count {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        .css-count.success {
+            background-color: #f0f9eb;
+            color: #67c23a;
+            border: 1px solid #c2e7b0;
+        }
+        .css-count.warning {
+            background-color: #fdf6ec;
+            color: #e6a23c;
+            border: 1px solid #f5dab1;
+        }
+        .css-count.danger {
+            background-color: #fef0f0;
+            color: #f56c6c;
+            border: 1px solid #fbc4c4;
+        }
+        .css-details {
+            font-size: 12px;
+            color: #666;
+        }
+        .enabled-count {
+            color: #67c23a;
+        }
+        .disabled-count {
+            color: #f56c6c;
+        }
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin: 10px 0;
+        }
+        .stat-item {
+            padding: 5px 10px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+        }
+        .code-block {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>新闻链接管理页面CSS选择器数量功能演示</h1>
+    
+    <div class="demo-section">
+        <h2>1. 表格列显示效果</h2>
+        <p>在新闻链接管理表格中添加了"CSS选择器"列，显示每个网站的CSS选择器配置情况：</p>
+        
+        <table class="table-demo">
+            <thead>
+                <tr>
+                    <th>网站名称</th>
+                    <th>URL</th>
+                    <th>语言</th>
+                    <th>CSS选择器</th>
+                    <th>创建时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>安全内参</td>
+                    <td>https://www.secrss.com</td>
+                    <td>zh</td>
+                    <td>
+                        <span class="css-count success">3</span>
+                        <span class="css-details">
+                            <span class="enabled-count">2启</span>
+                            <span class="disabled-count">1禁</span>
+                        </span>
+                    </td>
+                    <td>2024-01-01 10:00:00</td>
+                    <td>
+                        <button>编辑</button>
+                        <button>执行任务</button>
+                        <button>CSS选择器</button>
+                        <button>删除</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Example News</td>
+                    <td>https://news.example.com</td>
+                    <td>en</td>
+                    <td>
+                        <span class="css-count danger">0</span>
+                        <span class="css-details">未配置</span>
+                    </td>
+                    <td>2024-01-02 11:00:00</td>
+                    <td>
+                        <button>编辑</button>
+                        <button>执行任务</button>
+                        <button style="background-color: #f56c6c; color: white;">CSS选择器</button>
+                        <button>删除</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Tech Blog</td>
+                    <td>https://blog.tech.com</td>
+                    <td>en</td>
+                    <td>
+                        <span class="css-count warning">2</span>
+                        <span class="css-details">
+                            <span class="disabled-count">2禁</span>
+                        </span>
+                    </td>
+                    <td>2024-01-03 12:00:00</td>
+                    <td>
+                        <button>编辑</button>
+                        <button>执行任务</button>
+                        <button>CSS选择器</button>
+                        <button>删除</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <p><strong>颜色说明：</strong></p>
+        <ul>
+            <li><span class="css-count success">绿色</span>: 有启用的CSS选择器，可以正常抓取新闻</li>
+            <li><span class="css-count warning">黄色</span>: 有CSS选择器但都禁用了，不会抓取新闻</li>
+            <li><span class="css-count danger">红色</span>: 没有配置CSS选择器，无法抓取新闻</li>
+        </ul>
+    </div>
+    
+    <div class="demo-section">
+        <h2>2. 统计信息显示</h2>
+        <p>在表格上方显示CSS选择器的总体统计信息：</p>
+        
+        <div class="stats">
+            <div class="stat-item">网站总数: <strong>3</strong></div>
+            <div class="stat-item">已配置CSS: <strong style="color: #67c23a;">2</strong></div>
+            <div class="stat-item">未配置CSS: <strong style="color: #f56c6c;">1</strong></div>
+            <div class="stat-item">CSS总数: <strong>5</strong></div>
+        </div>
+    </div>
+    
+    <div class="demo-section">
+        <h2>3. 筛选功能</h2>
+        <p>新增CSS选择器筛选功能：</p>
+        <ul>
+            <li><strong>未配置</strong>: 显示没有配置CSS选择器的网站</li>
+            <li><strong>有配置</strong>: 显示有配置CSS选择器的网站</li>
+            <li><strong>有启用的</strong>: 显示有启用CSS选择器的网站</li>
+            <li><strong>全部禁用</strong>: 显示所有CSS选择器都禁用的网站</li>
+        </ul>
+    </div>
+    
+    <div class="demo-section">
+        <h2>4. 交互功能</h2>
+        <ul>
+            <li><strong>点击CSS选择器数字</strong>: 直接跳转到该网站的CSS选择器管理页面</li>
+            <li><strong>CSS选择器按钮</strong>: 显示配置数量，未配置时显示红色警告</li>
+            <li><strong>批量查看未配置CSS</strong>: 一键查看所有未配置CSS选择器的网站</li>
+            <li><strong>排序功能</strong>: 支持按CSS选择器数量排序</li>
+        </ul>
+    </div>
+    
+    <div class="demo-section">
+        <h2>5. 后端接口变更</h2>
+        <p>新增接口：</p>
+        <div class="code-block">
+POST /api/manager/news-links/page-with-css-count
+{
+  "page": 1,
+  "size": 10,
+  "keyword": "example",
+  "langs": ["en", "zh"]
+}
+        </div>
+        
+        <p>响应新增字段：</p>
+        <div class="code-block">
+{
+  "cssSelectorCount": 3,
+  "enabledCssSelectorCount": 2,
+  "disabledCssSelectorCount": 1
+}
+        </div>
+    </div>
+    
+    <div class="demo-section">
+        <h2>6. 前端代码主要修改</h2>
+        <ol>
+            <li>在API文件中添加新接口调用</li>
+            <li>修改表格列，添加CSS选择器显示</li>
+            <li>添加统计信息显示</li>
+            <li>添加筛选功能</li>
+            <li>添加交互功能（点击跳转、批量操作等）</li>
+            <li>添加样式美化</li>
+        </ol>
+    </div>
+    
+    <div class="demo-section">
+        <h2>7. 使用效果</h2>
+        <p>通过这次修改，新闻链接管理页面实现了以下改进：</p>
+        <ul>
+            <li><strong>可视化</strong>: 直观显示每个网站的CSS选择器配置状态</li>
+            <li><strong>效率提升</strong>: 无需跳转详情页即可了解配置情况</li>
+            <li><strong>问题识别</strong>: 快速识别未配置或配置有问题的网站</li>
+            <li><strong>批量管理</strong>: 支持批量查看和操作</li>
+            <li><strong>数据统计</strong>: 提供整体配置情况统计</li>
+        </ul>
+    </div>
+</body>
+</html>

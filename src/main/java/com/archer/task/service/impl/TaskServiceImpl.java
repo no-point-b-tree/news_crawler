@@ -1,6 +1,5 @@
 package com.archer.task.service.impl;
 
-import com.archer.task.constant.RuleTypeEnum;
 import com.archer.task.entity.*;
 import com.archer.task.mapper.*;
 import com.archer.task.service.*;
@@ -8,7 +7,6 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
-import org.apache.commons.lang3.time.DateFormatUtils;
 import org.apache.commons.lang3.time.DateUtils;
 import org.springframework.stereotype.Service;
 

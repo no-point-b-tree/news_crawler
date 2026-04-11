@@ -73,6 +73,57 @@ public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, News
     }
 
     @Override
+    public Page<com.archer.task.manager.vo.NewsLinkWithCssCountVO> pageNewsLinksWithCssCount(String keyword, List<String> langs, Integer page, Integer size) {
+        // 先获取分页的新闻链接
+        Page<NewsLink> newsLinkPage = pageNewsLinks(keyword, langs, page, size);
+        
+        // 转换为包含CSS数量的VO
+        Page<com.archer.task.manager.vo.NewsLinkWithCssCountVO> resultPage = new Page<>(
+            newsLinkPage.getCurrent(), 
+            newsLinkPage.getSize(), 
+            newsLinkPage.getTotal()
+        );
+        resultPage.setRecords(newsLinkPage.getRecords().stream().map(newsLink -> {
+            com.archer.task.manager.vo.NewsLinkWithCssCountVO vo = new com.archer.task.manager.vo.NewsLinkWithCssCountVO();
+            
+            // 复制NewsLink属性
+            vo.setId(newsLink.getId());
+            vo.setDomain(newsLink.getDomain());
+            vo.setUrl(newsLink.getUrl());
+            vo.setIsDelete(newsLink.getIsDelete());
+            vo.setName(newsLink.getName());
+            vo.setLang(newsLink.getLang());
+            vo.setCreateTime(newsLink.getCreateTime());
+            vo.setUpdateTime(newsLink.getUpdateTime());
+            
+            // 查询CSS选择器数量
+            LambdaQueryWrapper<CssSelectorLinkRelation> cssQueryWrapper = new LambdaQueryWrapper<>();
+            cssQueryWrapper.eq(CssSelectorLinkRelation::getUrl, newsLink.getUrl())
+                          .eq(CssSelectorLinkRelation::getIsDelete, "N");
+            
+            List<CssSelectorLinkRelation> cssSelectors = cssSelectorLinkRelationMapper.selectList(cssQueryWrapper);
+            
+            // 计算总数
+            vo.setCssSelectorCount(cssSelectors.size());
+            
+            // 计算启用和禁用的数量
+            long enabledCount = cssSelectors.stream()
+                    .filter(css -> "ON".equals(css.getEnabled()))
+                    .count();
+            long disabledCount = cssSelectors.stream()
+                    .filter(css -> "OFF".equals(css.getEnabled()))
+                    .count();
+            
+            vo.setEnabledCssSelectorCount((int) enabledCount);
+            vo.setDisabledCssSelectorCount((int) disabledCount);
+            
+            return vo;
+        }).toList());
+        
+        return resultPage;
+    }
+
+    @Override
     public List<String> getAllLanguages() {
         LambdaQueryWrapper<NewsLink> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.select(NewsLink::getLang)

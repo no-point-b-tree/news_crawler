@@ -36,6 +36,17 @@ public class NewsLinkManagerController {
         return ResponseEntity.ok(result);
     }
 
+    @PostMapping("/page-with-css-count")
+    public ResponseEntity<Page<com.archer.task.manager.vo.NewsLinkWithCssCountVO>> pageNewsLinksWithCssCount(@RequestBody NewsLinkPageRequest request) {
+        Page<com.archer.task.manager.vo.NewsLinkWithCssCountVO> result = newsLinkManagerService.pageNewsLinksWithCssCount(
+            request.getKeyword(), 
+            request.getLangs(), 
+            request.getPage(), 
+            request.getSize()
+        );
+        return ResponseEntity.ok(result);
+    }
+
     @GetMapping("/languages")
     public ResponseEntity<List<String>> getAllLanguages() {
         List<String> languages = newsLinkManagerService.getAllLanguages();

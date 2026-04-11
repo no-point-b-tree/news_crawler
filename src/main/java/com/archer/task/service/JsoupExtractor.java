@@ -17,7 +17,7 @@ import java.util.*;
 @Slf4j
 public class JsoupExtractor {
 
-    static List<String> MATCH_RULE_LIST = Arrays.asList("\\d+小时前", "\\d+分钟前", "\\d+\\s+mins?\\s+ago", "\\d+\\s+hours?\\s+ago");
+    public static List<String> MATCH_RULE_LIST = Arrays.asList("\\d+小时前", "\\d+分钟前", "\\d+\\s+mins?\\s+ago", "\\d+\\s+hours?\\s+ago");
 
     public static List<Hyperlink> extractor(String htmlContent, List<CssSelectorLinkRelation> cssSelectorList) {
         if (htmlContent == null) {

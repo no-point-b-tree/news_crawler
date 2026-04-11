@@ -10,6 +10,8 @@ import java.util.List;
 public interface NewsLinkManagerService extends IService<NewsLink> {
 
     Page<NewsLink> pageNewsLinks(String keyword, List<String> langs, Integer page, Integer size);
+    
+    Page<com.archer.task.manager.vo.NewsLinkWithCssCountVO> pageNewsLinksWithCssCount(String keyword, List<String> langs, Integer page, Integer size);
 
     List<String> getAllLanguages();
 

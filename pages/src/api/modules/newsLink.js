@@ -9,6 +9,14 @@ export const newsLinkApi = {
     });
   },
 
+  pageNewsLinksWithCssCount(params) {
+    return request({
+      url: '/manager/news-links/page-with-css-count',
+      method: 'post',
+      data: params
+    });
+  },
+
   getAllLanguages() {
     return request({
       url: '/manager/news-links/languages',
