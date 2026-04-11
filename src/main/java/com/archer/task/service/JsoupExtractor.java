@@ -1,5 +1,7 @@
 package com.archer.task.service;
 
+import com.archer.task.entity.CssSelectorLinkRelation;
+import org.apache.commons.lang3.time.DateUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -15,8 +17,9 @@ import java.util.*;
 @Slf4j
 public class JsoupExtractor {
 
+    static List<String> MATCH_RULE_LIST = Arrays.asList("\\d+小时前", "\\d+分钟前", "\\d+\\s+mins?\\s+ago", "\\d+\\s+hours?\\s+ago");
 
-    public static List<Hyperlink> extractor(String htmlContent, List<String> patternList, List<String> cssSelectorList, Integer minLevel) {
+    public static List<Hyperlink> extractor(String htmlContent, List<CssSelectorLinkRelation> cssSelectorList) {
         if (htmlContent == null) {
             return Collections.emptyList();
         }
@@ -24,54 +27,38 @@ public class JsoupExtractor {
         // 找出所有文本内容为日期的元素
         Set<String> hrefSet = new HashSet<>();
         List<Hyperlink> hyperlinkListAll = new ArrayList<>();
-        if (patternList != null) {
-            for (String pattern : patternList) {
-                Elements dateElements = doc.select("*:matches(^" + pattern + "$)");
-                for (Element dateElem : dateElements) {
-                    List<Hyperlink> hyperlinkList = new ArrayList<>();
-                    // 向上找5层父节点
-                    Element parent = dateElem.parent();
-                    int level = 1;
-                    while (parent != null && level <= 5) {
-                        // 在当前父节点下找所有超链接 包括后代
-                        Elements links = parent.select("a");
-                        for (Element link : links) {
-                            String href = link.attr("href");
-                            if (hrefSet.add(href)) {
-                                if (minLevel != null && minLevel > level) {
-                                    continue;
-                                }
-                                String text = link.text();
-                                Hyperlink hyperlink = new Hyperlink();
-                                hyperlink.setHref(href);
-                                hyperlink.setContent(text);
-                                hyperlink.setPattern(pattern);
-                                hyperlinkList.add(hyperlink);
-                            }
-                        }
-                        if (!hyperlinkList.isEmpty()) {
-                            break;
-                        }
-                        // 继续向上
-                        parent = parent.parent();
-                        level++;
-                    }
-                    hyperlinkListAll.addAll(hyperlinkList);
-                }
-            }
-        }
         if (cssSelectorList != null && !cssSelectorList.isEmpty()) {
-            for (String cssSelector : cssSelectorList) {
-                Elements dateElements = doc.select(cssSelector);
-                for (Element link : dateElements) {
-                    String href = link.attr("href");
-                    if (hrefSet.add(href)) {
-                        String text = link.text();
-                        Hyperlink hyperlink = new Hyperlink();
-                        hyperlink.setHref(href);
-                        hyperlink.setContent(text);
-                        hyperlinkListAll.add(hyperlink);
+            for (CssSelectorLinkRelation cssSelectorLinkRelation : cssSelectorList) {
+                String groupSelector = cssSelectorLinkRelation.getCssSelectorGroup();
+                Elements groupSelectorElements = doc.select(groupSelector);
+                for (Element itemElement : groupSelectorElements) {
+                    // 每个卡片的元素 查询一个卡片下的超链接和日期
+                    Element link = itemElement.select(cssSelectorLinkRelation.getHyperLinkCssSelector()).first();
+                    Element date = itemElement.select(cssSelectorLinkRelation.getDateCssSelector()).first();
+                    if (link != null && date != null) {
+                        String href = link.attr("href");
+                        if (hrefSet.add(href)) {
+                            String text = link.text();
+                            Hyperlink hyperlink = new Hyperlink();
+                            hyperlink.setHref(href);
+                            hyperlink.setContent(text);
+                            try {
+                                for (String rule : MATCH_RULE_LIST) {
+                                    if (date.text().matches(rule)) {
+                                        hyperlink.setDate(new Date());
+                                    }
+                                }
+                                if (hyperlink.getDate() == null) {
+                                    Date publishDate = DateUtils.parseDate(date.text(), cssSelectorLinkRelation.getDatePattern());
+                                    hyperlink.setDate(publishDate);
+                                }
+                            } catch (Exception e) {
+                                log.error("日期转换失败:", e);
+                            }
+                            hyperlinkListAll.add(hyperlink);
+                        }
                     }
+
                 }
             }
         }

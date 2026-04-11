@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.Date;
 import java.util.List;
@@ -30,30 +31,40 @@ public class CssSelectorLinkRelationServiceImpl extends ServiceImpl<CssSelectorL
     }
 
     @Override
-    public List<CssSelectorLinkRelation> findByCssSelector(String cssSelector) {
+    public List<CssSelectorLinkRelation> findByCssSelectorGroup(String cssSelectorGroup) {
         LambdaQueryWrapper<CssSelectorLinkRelation> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(CssSelectorLinkRelation::getCssSelector, cssSelector)
+        queryWrapper.eq(CssSelectorLinkRelation::getCssSelectorGroup, cssSelectorGroup)
                    .eq(CssSelectorLinkRelation::getIsDelete, "N");
         return cssSelectorLinkRelationMapper.selectList(queryWrapper);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean saveOrUpdateRelation(String url, String cssSelector) {
+    public boolean saveOrUpdateRelation(String url, String cssSelectorGroup, String dateCssSelector, String hyperLinkCssSelector, String enabled) {
+        if (!StringUtils.hasText(url) || !StringUtils.hasText(cssSelectorGroup)) {
+            return false;
+        }
+
         LambdaQueryWrapper<CssSelectorLinkRelation> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(CssSelectorLinkRelation::getUrl, url)
-                   .eq(CssSelectorLinkRelation::getCssSelector, cssSelector)
+                   .eq(CssSelectorLinkRelation::getCssSelectorGroup, cssSelectorGroup)
                    .eq(CssSelectorLinkRelation::getIsDelete, "N");
 
         CssSelectorLinkRelation existing = cssSelectorLinkRelationMapper.selectOne(queryWrapper);
         if (existing != null) {
+            existing.setDateCssSelector(dateCssSelector);
+            existing.setHyperLinkCssSelector(hyperLinkCssSelector);
+            existing.setEnabled(enabled);
             existing.setUpdateTime(new Date());
             return cssSelectorLinkRelationMapper.updateById(existing) > 0;
         }
 
         CssSelectorLinkRelation relation = new CssSelectorLinkRelation();
         relation.setUrl(url);
-        relation.setCssSelector(cssSelector);
+        relation.setCssSelectorGroup(cssSelectorGroup);
+        relation.setDateCssSelector(dateCssSelector);
+        relation.setHyperLinkCssSelector(hyperLinkCssSelector);
+        relation.setEnabled(StringUtils.hasText(enabled) ? enabled : "ON");
         relation.setIsDelete("N");
         relation.setCreateTime(new Date());
         relation.setUpdateTime(new Date());
@@ -66,7 +77,7 @@ public class CssSelectorLinkRelationServiceImpl extends ServiceImpl<CssSelectorL
     public boolean deleteByUrl(String url) {
         LambdaQueryWrapper<CssSelectorLinkRelation> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(CssSelectorLinkRelation::getUrl, url)
-                   .eq(CssSelectorLinkRelation::getIsDelete, "0");
+                   .eq(CssSelectorLinkRelation::getIsDelete, "N");
 
         List<CssSelectorLinkRelation> relations = cssSelectorLinkRelationMapper.selectList(queryWrapper);
         if (relations.isEmpty()) {
@@ -74,7 +85,7 @@ public class CssSelectorLinkRelationServiceImpl extends ServiceImpl<CssSelectorL
         }
 
         for (CssSelectorLinkRelation relation : relations) {
-            relation.setIsDelete("1");
+            relation.setIsDelete("Y");
             relation.setUpdateTime(new Date());
             cssSelectorLinkRelationMapper.updateById(relation);
         }
@@ -84,10 +95,10 @@ public class CssSelectorLinkRelationServiceImpl extends ServiceImpl<CssSelectorL
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean deleteByCssSelector(String cssSelector) {
+    public boolean deleteByCssSelectorGroup(String cssSelectorGroup) {
         LambdaQueryWrapper<CssSelectorLinkRelation> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(CssSelectorLinkRelation::getCssSelector, cssSelector)
-                   .eq(CssSelectorLinkRelation::getIsDelete, "0");
+        queryWrapper.eq(CssSelectorLinkRelation::getCssSelectorGroup, cssSelectorGroup)
+                   .eq(CssSelectorLinkRelation::getIsDelete, "N");
 
         List<CssSelectorLinkRelation> relations = cssSelectorLinkRelationMapper.selectList(queryWrapper);
         if (relations.isEmpty()) {
@@ -95,7 +106,7 @@ public class CssSelectorLinkRelationServiceImpl extends ServiceImpl<CssSelectorL
         }
 
         for (CssSelectorLinkRelation relation : relations) {
-            relation.setIsDelete("1");
+            relation.setIsDelete("Y");
             relation.setUpdateTime(new Date());
             cssSelectorLinkRelationMapper.updateById(relation);
         }
@@ -104,19 +115,11 @@ public class CssSelectorLinkRelationServiceImpl extends ServiceImpl<CssSelectorL
     }
 
     @Override
-    public List<String> findCssSelectorsByUrl(String url) {
-        List<CssSelectorLinkRelation> relations = findByUrl(url);
-        return relations.stream()
-                       .map(CssSelectorLinkRelation::getCssSelector)
-                       .distinct()
-                       .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<String> findUrlsByCssSelector(String cssSelector) {
-        List<CssSelectorLinkRelation> relations = findByCssSelector(cssSelector);
+    public List<String> findUrlsByCssSelectorGroup(String cssSelectorGroup) {
+        List<CssSelectorLinkRelation> relations = findByCssSelectorGroup(cssSelectorGroup);
         return relations.stream()
                        .map(CssSelectorLinkRelation::getUrl)
+                       .filter(StringUtils::hasText)
                        .distinct()
                        .collect(Collectors.toList());
     }

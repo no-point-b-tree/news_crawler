@@ -1,6 +1,7 @@
 package com.archer.task.manager.controller;
 
 import com.archer.task.entity.CssSelectorLinkRelation;
+import com.archer.task.manager.dto.CssSelectorRelationRequest;
 import com.archer.task.service.CssSelectorLinkRelationService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
@@ -28,16 +29,20 @@ public class CssSelectorLinkRelationController {
         return ResponseEntity.ok(cssSelectorLinkRelationService.findByUrl(url));
     }
 
-    @GetMapping("/by-css-selector")
-    public ResponseEntity<?> findByCssSelector(@RequestParam String cssSelector) {
-        return ResponseEntity.ok(cssSelectorLinkRelationService.findByCssSelector(cssSelector));
+    @GetMapping("/by-css-selector-group")
+    public ResponseEntity<?> findByCssSelectorGroup(@RequestParam String cssSelectorGroup) {
+        return ResponseEntity.ok(cssSelectorLinkRelationService.findByCssSelectorGroup(cssSelectorGroup));
     }
 
     @PostMapping
-    public ResponseEntity<Boolean> saveOrUpdateRelation(
-            @RequestParam String url,
-            @RequestParam String cssSelector) {
-        boolean result = cssSelectorLinkRelationService.saveOrUpdateRelation(url, cssSelector);
+    public ResponseEntity<Boolean> saveOrUpdateRelation(@RequestBody CssSelectorRelationRequest request) {
+        boolean result = cssSelectorLinkRelationService.saveOrUpdateRelation(
+            request.getUrl(),
+            request.getCssSelectorGroup(),
+            request.getDateCssSelector(),
+            request.getHyperLinkCssSelector(),
+            request.getEnabled()
+        );
         return ResponseEntity.ok(result);
     }
 
@@ -47,19 +52,15 @@ public class CssSelectorLinkRelationController {
         return ResponseEntity.ok(result);
     }
 
-    @DeleteMapping("/by-css-selector")
-    public ResponseEntity<Boolean> deleteByCssSelector(@RequestParam String cssSelector) {
-        boolean result = cssSelectorLinkRelationService.deleteByCssSelector(cssSelector);
+    @DeleteMapping("/by-css-selector-group")
+    public ResponseEntity<Boolean> deleteByCssSelectorGroup(@RequestParam String cssSelectorGroup) {
+        boolean result = cssSelectorLinkRelationService.deleteByCssSelectorGroup(cssSelectorGroup);
         return ResponseEntity.ok(result);
     }
 
-    @GetMapping("/css-selectors/by-url")
-    public ResponseEntity<?> findCssSelectorsByUrl(@RequestParam String url) {
-        return ResponseEntity.ok(cssSelectorLinkRelationService.findCssSelectorsByUrl(url));
-    }
 
-    @GetMapping("/urls/by-css-selector")
-    public ResponseEntity<?> findUrlsByCssSelector(@RequestParam String cssSelector) {
-        return ResponseEntity.ok(cssSelectorLinkRelationService.findUrlsByCssSelector(cssSelector));
+    @GetMapping("/urls/by-css-selector-group")
+    public ResponseEntity<?> findUrlsByCssSelectorGroup(@RequestParam String cssSelectorGroup) {
+        return ResponseEntity.ok(cssSelectorLinkRelationService.findUrlsByCssSelectorGroup(cssSelectorGroup));
     }
 }

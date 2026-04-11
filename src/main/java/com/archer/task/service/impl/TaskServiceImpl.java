@@ -57,16 +57,15 @@ public class TaskServiceImpl implements TaskService {
             CountDownLatch countDownLatch = new CountDownLatch(rssLinkList.size() + newsLinks.size());
             Date current = new Date();
             Date startDate = DateUtils.addDays(current, -1);
-            List<String> ruleList = getRuleList(getDateListByRange(startDate, current));
             for (String rssLink : rssLinkList) {
                 SingleRssTaskService task = new SingleRssTaskService(rssLink, startDate, current, new LatestSpiderTaskServiceImpl(), newsMapper, countDownLatch);
                 threadPool.execute(task);
             }
 
             for (NewsLink newsLink : newsLinks) {
-                List<String> cssSelectors = cssSelectorLinkRelationService.findCssSelectorsByUrl(newsLink.getUrl());
-                SingleNewsTaskService task = new SingleNewsTaskService(newsLink, new LatestSpiderTaskServiceImpl(), ruleList, cssSelectors
-                        , newsMapper, taskLog.getId(), countDownLatch);
+                List<CssSelectorLinkRelation> cssSelectors = cssSelectorLinkRelationService.findByUrl(newsLink.getUrl());
+                SingleNewsTaskService task = new SingleNewsTaskService(newsLink, new LatestSpiderTaskServiceImpl(), cssSelectors
+                        , newsMapper, taskLog.getId(), countDownLatch,startDate,current);
                 threadPool.execute(task);
             }
             countDownLatch.await();
@@ -77,30 +76,4 @@ public class TaskServiceImpl implements TaskService {
 
     }
 
-    @Override
-    public List<String> getRuleList(List<Date> dateList) {
-        List<MatchRule> matchRules = matchRuleMapper.selectList(null);
-        List<String> ruleList = new ArrayList<>();
-        for (MatchRule matchRule : matchRules) {
-            if (matchRule.getRuleType().equals(RuleTypeEnum.REGEX.name())) {
-                ruleList.add(matchRule.getRule());
-            } else if (matchRule.getRuleType().equals(RuleTypeEnum.DATE.name())) {
-                for (Date date : dateList) {
-                    ruleList.add(DateFormatUtils.format(date, matchRule.getRule(), Locale.ENGLISH));
-                }
-            }
-        }
-        return ruleList;
-    }
-
-    @Override
-    public List<Date> getDateListByRange(Date startDate, Date endDate) {
-        long diffInMillis = endDate.getTime() - startDate.getTime();
-        long days = diffInMillis / (24 * 60 * 60 * 1000);
-        ArrayList<Date> list = new ArrayList<>();
-        for (int i = 0; i < days + 1; i++) {
-            list.add(DateUtils.addDays(startDate, i));
-        }
-        return list;
-    }
 }

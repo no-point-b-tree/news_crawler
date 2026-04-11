@@ -34,8 +34,9 @@ export const rssLinkApi = {
 
   startRssTask(url) {
     return request({
-      url: `/manager/rss-links/${encodeURIComponent(url)}/start-task`,
-      method: 'post'
+      url: '/manager/rss-links/start-task',
+      method: 'post',
+      data: { url }
     });
   }
 };

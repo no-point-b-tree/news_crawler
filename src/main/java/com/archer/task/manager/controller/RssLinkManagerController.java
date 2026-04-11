@@ -3,6 +3,7 @@ package com.archer.task.manager.controller;
 import com.archer.task.entity.RssLink;
 import com.archer.task.manager.dto.PageRequest;
 import com.archer.task.manager.dto.RssLinkPageRequest;
+import com.archer.task.manager.dto.UrlRequest;
 import com.archer.task.manager.service.RssLinkManagerService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
@@ -45,9 +46,9 @@ public class RssLinkManagerController {
         return ResponseEntity.ok(result);
     }
 
-    @PostMapping("/{url}/start-task")
-    public ResponseEntity<Boolean> startRssTask(@PathVariable String url) {
-        boolean result = rssLinkManagerService.startRssTask(url);
+    @PostMapping("/start-task")
+    public ResponseEntity<Boolean> startRssTask(@RequestBody UrlRequest request) {
+        boolean result = rssLinkManagerService.startRssTask(request.getUrl());
         return ResponseEntity.ok(result);
     }
 }

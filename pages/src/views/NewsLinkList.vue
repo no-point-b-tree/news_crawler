@@ -207,46 +207,180 @@
     <el-dialog
       v-model="cssSelectorDialog.visible"
       :title="`${cssSelectorDialog.url} - CSS选择器管理`"
-      width="800px"
+      width="900px"
     >
       <div class="css-selector-dialog">
-        <div class="css-selector-form">
-          <el-input
-            v-model="cssSelectorDialog.newSelector"
-            placeholder="请输入CSS选择器"
-            style="width: 300px; margin-right: 10px"
-          />
-          <el-button type="primary" @click="handleAddCssSelector">添加</el-button>
-        </div>
+        <el-card class="add-css-selector-card">
+          <template #header>
+            <div class="card-header">
+              <span>添加CSS选择器配置</span>
+            </div>
+          </template>
+          <el-form
+            ref="cssSelectorFormRef"
+            :model="cssSelectorDialog.formData"
+            :rules="cssSelectorDialog.formRules"
+            label-width="140px"
+            label-position="left"
+          >
+            <el-row :gutter="20">
+              <el-col :span="24">
+                <el-form-item label="CSS选择器组" prop="cssSelectorGroup">
+                  <el-input
+                    v-model="cssSelectorDialog.formData.cssSelectorGroup"
+                    placeholder="请输入CSS选择器组（如：.article-list .item）"
+                    maxlength="500"
+                    show-word-limit
+                  />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="日期选择器" prop="dateCssSelector">
+                  <el-input
+                    v-model="cssSelectorDialog.formData.dateCssSelector"
+                    placeholder="请输入日期选择器（如：.date）"
+                    maxlength="500"
+                    show-word-limit
+                  />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="超链接选择器" prop="hyperLinkCssSelector">
+                  <el-input
+                    v-model="cssSelectorDialog.formData.hyperLinkCssSelector"
+                    placeholder="请输入超链接选择器（如：a.title）"
+                    maxlength="500"
+                    show-word-limit
+                  />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="启用状态" prop="enabled">
+                  <el-select
+                    v-model="cssSelectorDialog.formData.enabled"
+                    placeholder="请选择启用状态"
+                    style="width: 100%"
+                  >
+                    <el-option label="启用" value="ON" />
+                    <el-option label="关闭" value="OFF" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item>
+                  <el-button type="primary" @click="handleAddCssSelector" :loading="cssSelectorDialog.loading">
+                    添加配置
+                  </el-button>
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </el-form>
+        </el-card>
 
-        <el-table :data="cssSelectorDialog.data" style="margin-top: 20px">
-          <el-table-column prop="cssSelector" label="CSS选择器" />
-          <el-table-column prop="createTime" label="创建时间" width="180">
-            <template #default="{ row }">
-              {{ formatDate(row.createTime) }}
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="150">
-            <template #default="{ row }">
-              <el-button type="danger" size="small" @click="handleDeleteCssSelector(row)">
-                删除
-              </el-button>
-            </template>
-          </el-table-column>
-        </el-table>
+        <el-card style="margin-top: 20px">
+          <template #header>
+            <div class="card-header">
+              <span>已配置的CSS选择器</span>
+            </div>
+          </template>
+          <el-table :data="cssSelectorDialog.data" style="width: 100%">
+            <el-table-column prop="cssSelectorGroup" label="CSS选择器组" min-width="150" />
+            <el-table-column prop="dateCssSelector" label="日期选择器" min-width="120" />
+            <el-table-column prop="hyperLinkCssSelector" label="超链接选择器" min-width="130" />
+            <el-table-column prop="enabled" label="状态" width="80">
+              <template #default="{ row }">
+                <el-tag :type="row.enabled === 'ON' ? 'success' : 'danger'" size="small">
+                  {{ row.enabled === 'ON' ? '启用' : '关闭' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="createTime" label="创建时间" width="140">
+              <template #default="{ row }">
+                {{ formatDate(row.createTime) }}
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="180" fixed="right">
+              <template #default="{ row }">
+                <div class="action-buttons">
+                  <el-button type="primary" size="small" @click="handleEditCssSelector(row)">编辑</el-button>
+                  <el-button type="danger" size="small" @click="handleDeleteCssSelector(row)">删除</el-button>
+                </div>
+              </template>
+            </el-table-column>
+          </el-table>
 
-        <div class="pagination">
-          <el-pagination
-            v-model:current-page="cssSelectorDialog.pagination.current"
-            v-model:page-size="cssSelectorDialog.pagination.size"
-            :total="cssSelectorDialog.pagination.total"
-            :page-sizes="[10, 20, 50]"
-            layout="total, sizes, prev, pager, next"
-            @size-change="handleCssSelectorSizeChange"
-            @current-change="handleCssSelectorPageChange"
-          />
-        </div>
+          <div class="pagination">
+            <el-pagination
+              v-model:current-page="cssSelectorDialog.pagination.current"
+              v-model:page-size="cssSelectorDialog.pagination.size"
+              :total="cssSelectorDialog.pagination.total"
+              :page-sizes="[10, 20, 50]"
+              layout="total, sizes, prev, pager, next"
+              @size-change="handleCssSelectorSizeChange"
+              @current-change="handleCssSelectorPageChange"
+            />
+          </div>
+        </el-card>
       </div>
+    </el-dialog>
+
+    <el-dialog
+      v-model="cssSelectorEditDialog.visible"
+      :title="cssSelectorEditDialog.title"
+      width="600px"
+      @close="handleCssSelectorEditClose"
+    >
+      <el-form
+        ref="cssSelectorEditFormRef"
+        :model="cssSelectorEditDialog.formData"
+        :rules="cssSelectorDialog.formRules"
+        label-width="140px"
+        label-position="left"
+      >
+        <el-form-item label="CSS选择器组" prop="cssSelectorGroup">
+          <el-input
+            v-model="cssSelectorEditDialog.formData.cssSelectorGroup"
+            placeholder="请输入CSS选择器组"
+            maxlength="500"
+            show-word-limit
+          />
+        </el-form-item>
+        <el-form-item label="日期选择器" prop="dateCssSelector">
+          <el-input
+            v-model="cssSelectorEditDialog.formData.dateCssSelector"
+            placeholder="请输入日期选择器"
+            maxlength="500"
+            show-word-limit
+          />
+        </el-form-item>
+        <el-form-item label="超链接选择器" prop="hyperLinkCssSelector">
+          <el-input
+            v-model="cssSelectorEditDialog.formData.hyperLinkCssSelector"
+            placeholder="请输入超链接选择器"
+            maxlength="500"
+            show-word-limit
+          />
+        </el-form-item>
+        <el-form-item label="启用状态" prop="enabled">
+          <el-select
+            v-model="cssSelectorEditDialog.formData.enabled"
+            placeholder="请选择启用状态"
+            style="width: 100%"
+          >
+            <el-option label="启用" value="ON" />
+            <el-option label="关闭" value="OFF" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="cssSelectorEditDialog.visible = false">取消</el-button>
+          <el-button type="primary" @click="handleCssSelectorEditSubmit" :loading="cssSelectorEditDialog.loading">
+            确定
+          </el-button>
+        </span>
+      </template>
     </el-dialog>
   </div>
 </template>
@@ -274,14 +408,52 @@ const pagination = reactive({
 const cssSelectorDialog = reactive({
   visible: false,
   url: '',
-  newSelector: '',
+  loading: false,
   data: [],
   pagination: {
     current: 1,
     size: 10,
     total: 0
+  },
+  formData: {
+    cssSelectorGroup: '',
+    dateCssSelector: '',
+    hyperLinkCssSelector: '',
+    enabled: 'ON'
+  },
+  formRules: {
+    cssSelectorGroup: [
+      { required: true, message: '请输入CSS选择器组', trigger: 'blur' },
+      { min: 1, max: 500, message: '长度在 1 到 500 个字符', trigger: 'blur' }
+    ],
+    dateCssSelector: [
+      { max: 500, message: '长度不能超过 500 个字符', trigger: 'blur' }
+    ],
+    hyperLinkCssSelector: [
+      { max: 500, message: '长度不能超过 500 个字符', trigger: 'blur' }
+    ],
+    enabled: [
+      { required: true, message: '请选择启用状态', trigger: 'change' }
+    ]
   }
 });
+
+const cssSelectorEditDialog = reactive({
+  visible: false,
+  title: '编辑CSS选择器配置',
+  loading: false,
+  isEdit: false,
+  currentId: null,
+  formData: {
+    cssSelectorGroup: '',
+    dateCssSelector: '',
+    hyperLinkCssSelector: '',
+    enabled: 'ON'
+  }
+});
+
+const cssSelectorFormRef = ref();
+const cssSelectorEditFormRef = ref();
 
 const formDialog = reactive({
   visible: false,
@@ -515,8 +687,19 @@ const handleBatchDelete = async () => {
 const handleViewCssSelectors = async (row) => {
   cssSelectorDialog.visible = true;
   cssSelectorDialog.url = row.url;
-  cssSelectorDialog.newSelector = '';
   cssSelectorDialog.pagination.current = 1;
+  
+  Object.assign(cssSelectorDialog.formData, {
+    cssSelectorGroup: '',
+    dateCssSelector: '',
+    hyperLinkCssSelector: '',
+    enabled: 'ON'
+  });
+  
+  if (cssSelectorFormRef.value) {
+    cssSelectorFormRef.value.clearValidate();
+  }
+  
   fetchCssSelectors();
 };
 
@@ -535,17 +718,41 @@ const fetchCssSelectors = async () => {
 };
 
 const handleAddCssSelector = async () => {
-  if (!cssSelectorDialog.newSelector.trim()) {
-    ElMessage.warning('请输入CSS选择器');
-    return;
-  }
   try {
-    await newsLinkApi.addCssSelector(cssSelectorDialog.url, cssSelectorDialog.newSelector);
+    await cssSelectorFormRef.value.validate();
+    
+    cssSelectorDialog.loading = true;
+    
+    const formData = {
+      cssSelectorGroup: cssSelectorDialog.formData.cssSelectorGroup,
+      dateCssSelector: cssSelectorDialog.formData.dateCssSelector,
+      hyperLinkCssSelector: cssSelectorDialog.formData.hyperLinkCssSelector,
+      enabled: cssSelectorDialog.formData.enabled
+    };
+    
+    await newsLinkApi.addCssSelector(cssSelectorDialog.url, formData);
     ElMessage.success('添加成功');
-    cssSelectorDialog.newSelector = '';
+    
+    Object.assign(cssSelectorDialog.formData, {
+      cssSelectorGroup: '',
+      dateCssSelector: '',
+      hyperLinkCssSelector: '',
+      enabled: 'ON'
+    });
+    
+    if (cssSelectorFormRef.value) {
+      cssSelectorFormRef.value.clearValidate();
+    }
+    
     fetchCssSelectors();
   } catch (error) {
-    ElMessage.error('添加失败');
+    if (error && error.errors) {
+      ElMessage.error('请检查表单数据');
+    } else {
+      ElMessage.error('添加失败');
+    }
+  } finally {
+    cssSelectorDialog.loading = false;
   }
 };
 
@@ -573,6 +780,57 @@ const handleCssSelectorSizeChange = (size) => {
   cssSelectorDialog.pagination.size = size;
   cssSelectorDialog.pagination.current = 1;
   fetchCssSelectors();
+};
+
+const handleEditCssSelector = (row) => {
+  cssSelectorEditDialog.visible = true;
+  cssSelectorEditDialog.title = '编辑CSS选择器配置';
+  cssSelectorEditDialog.isEdit = true;
+  cssSelectorEditDialog.currentId = row.id;
+  
+  Object.assign(cssSelectorEditDialog.formData, {
+    cssSelectorGroup: row.cssSelectorGroup || '',
+    dateCssSelector: row.dateCssSelector || '',
+    hyperLinkCssSelector: row.hyperLinkCssSelector || '',
+    enabled: row.enabled || 'ON'
+  });
+  
+  if (cssSelectorEditFormRef.value) {
+    cssSelectorEditFormRef.value.clearValidate();
+  }
+};
+
+const handleCssSelectorEditClose = () => {
+  cssSelectorEditDialog.loading = false;
+};
+
+const handleCssSelectorEditSubmit = async () => {
+  try {
+    await cssSelectorEditFormRef.value.validate();
+    
+    cssSelectorEditDialog.loading = true;
+    
+    const formData = {
+      cssSelectorGroup: cssSelectorEditDialog.formData.cssSelectorGroup,
+      dateCssSelector: cssSelectorEditDialog.formData.dateCssSelector,
+      hyperLinkCssSelector: cssSelectorEditDialog.formData.hyperLinkCssSelector,
+      enabled: cssSelectorEditDialog.formData.enabled
+    };
+    
+    await newsLinkApi.updateCssSelector(cssSelectorEditDialog.currentId, formData);
+    ElMessage.success('更新成功');
+    
+    cssSelectorEditDialog.visible = false;
+    fetchCssSelectors();
+  } catch (error) {
+    if (error && error.errors) {
+      ElMessage.error('请检查表单数据');
+    } else {
+      ElMessage.error('更新失败');
+    }
+  } finally {
+    cssSelectorEditDialog.loading = false;
+  }
 };
 
 const truncateText = (text, maxLength) => {
@@ -669,22 +927,31 @@ const formatDate = (dateString) => {
   }
 }
 
-.css-selector-dialog .css-selector-form {
-  display: flex;
-  align-items: center;
+.css-selector-dialog .add-css-selector-card {
   margin-bottom: 20px;
 }
 
+.css-selector-dialog .card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.css-selector-dialog .el-form-item {
+  margin-bottom: 18px;
+}
+
+.css-selector-dialog .el-row {
+  margin-bottom: 0;
+}
+
 @media (max-width: 768px) {
-  .css-selector-dialog .css-selector-form {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
+  .css-selector-dialog .el-col {
+    margin-bottom: 10px;
   }
   
-  .css-selector-dialog .css-selector-form .el-input {
-    width: 100% !important;
-    margin-right: 0 !important;
+  .css-selector-dialog .el-form-item {
+    margin-bottom: 15px;
   }
 }
 

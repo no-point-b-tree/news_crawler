@@ -1,6 +1,6 @@
 package com.archer.task.entity;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
@@ -8,6 +8,7 @@ import lombok.Data;
 import java.util.Date;
 
 @Data
+@TableName("css_selector_link_relation")
 public class CssSelectorLinkRelation {
 
     @JsonSerialize(using = ToStringSerializer.class)
@@ -15,7 +16,15 @@ public class CssSelectorLinkRelation {
 
     private String url;
 
-    private String cssSelector;
+    private String cssSelectorGroup;
+
+    private String dateCssSelector;
+
+    private String hyperLinkCssSelector;
+
+    private String datePattern;
+
+    private String enabled;
 
     private String isDelete;
 

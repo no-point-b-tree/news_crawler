@@ -138,9 +138,8 @@ public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, News
             NewsLink newsLink = newsLinkMapper.selectOne(wrapper);
             Date current = new Date();
             Date startDate = DateUtils.addDays(current, -1);
-            List<String> ruleList = taskService.getRuleList(taskService.getDateListByRange(startDate, current));
-            List<String> cssSelectors = cssSelectorLinkRelationService.findCssSelectorsByUrl(newsLink.getUrl());
-            SingleNewsTaskService singleNewsTaskService = new SingleNewsTaskService(newsLink, new LatestSpiderTaskServiceImpl(), ruleList, cssSelectors, newsMapper, taskId, new CountDownLatch(1));
+            List<CssSelectorLinkRelation> cssSelectors = cssSelectorLinkRelationService.findByUrl(newsLink.getUrl());
+            SingleNewsTaskService singleNewsTaskService = new SingleNewsTaskService(newsLink, new LatestSpiderTaskServiceImpl(), cssSelectors, newsMapper, taskId, new CountDownLatch(1),startDate,current);
             new Thread(singleNewsTaskService).start();
             return true;
         } catch (Exception e) {
@@ -170,10 +169,13 @@ public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, News
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean addCssSelector(String url, String cssSelector) {
+    public boolean addCssSelector(String url, String cssSelectorGroup, String dateCssSelector, String hyperLinkCssSelector, String enabled) {
         CssSelectorLinkRelation relation = new CssSelectorLinkRelation();
         relation.setUrl(url);
-        relation.setCssSelector(cssSelector);
+        relation.setCssSelectorGroup(cssSelectorGroup);
+        relation.setDateCssSelector(dateCssSelector);
+        relation.setHyperLinkCssSelector(hyperLinkCssSelector);
+        relation.setEnabled(enabled != null ? enabled : "ON");
         relation.setIsDelete("N");
         relation.setCreateTime(new Date());
         relation.setUpdateTime(new Date());
@@ -182,12 +184,15 @@ public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, News
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean updateCssSelector(Long id, String cssSelector) {
+    public boolean updateCssSelector(Long id, String cssSelectorGroup, String dateCssSelector, String hyperLinkCssSelector, String enabled) {
         CssSelectorLinkRelation relation = cssSelectorLinkRelationMapper.selectById(id);
         if (relation == null) {
             return false;
         }
-        relation.setCssSelector(cssSelector);
+        relation.setCssSelectorGroup(cssSelectorGroup);
+        relation.setDateCssSelector(dateCssSelector);
+        relation.setHyperLinkCssSelector(hyperLinkCssSelector);
+        relation.setEnabled(enabled != null ? enabled : "ON");
         relation.setUpdateTime(new Date());
         return cssSelectorLinkRelationMapper.updateById(relation) > 0;
     }

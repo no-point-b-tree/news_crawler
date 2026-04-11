@@ -12,10 +12,13 @@
 CREATE TABLE `css_selector_link_relation` (
   `id` bigint NOT NULL COMMENT 'id',
   `url` varchar(5000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'url',
-  `css_selector` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'css选择器',
+  `css_selector_group` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'css选择器',
   `is_delete` char(1) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '是否删除,N否,Y是',
   `create_time` timestamp NULL DEFAULT NULL COMMENT '创建时间',
   `update_time` timestamp NULL DEFAULT NULL COMMENT '更新时间',
+  `date_css_selector` varchar(500) DEFAULT NULL COMMENT '日期选择器',
+  `hyper_link_css_selector` varchar(500) DEFAULT NULL COMMENT '超链接选择器',
+  `enabled` varchar(100) DEFAULT NULL COMMENT 'ON启用,OFF关闭',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='css选择器和url的关联关系表';
 
@@ -37,7 +40,6 @@ CREATE TABLE `news_link` (
   `domain` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '域名',
   `url` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'url',
   `is_delete` char(1) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '是否删除',
-  `min_level` int DEFAULT NULL COMMENT '最小设置等级',
   `create_time` timestamp NULL DEFAULT NULL COMMENT '开始时间',
   `update_time` timestamp NULL DEFAULT NULL COMMENT '结束时间',
   `lang` varchar(500) DEFAULT NULL COMMENT '语言',
@@ -53,6 +55,8 @@ CREATE TABLE `task_log` (
   `is_delete` char(1) DEFAULT NULL COMMENT '是否删除,N否,Y是',
   `create_time` timestamp NULL DEFAULT NULL COMMENT '创建时间',
   `update_time` timestamp NULL DEFAULT NULL COMMENT '更新时间',
+  `start_date` timestamp NULL DEFAULT NULL COMMENT '新闻开始时间',
+  `end_date` timestamp NULL DEFAULT NULL COMMENT '新闻结束时间',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='任务日志';
 

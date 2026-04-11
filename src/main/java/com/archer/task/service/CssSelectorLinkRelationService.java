@@ -9,15 +9,13 @@ public interface CssSelectorLinkRelationService extends IService<CssSelectorLink
 
     List<CssSelectorLinkRelation> findByUrl(String url);
 
-    List<CssSelectorLinkRelation> findByCssSelector(String cssSelector);
+    List<CssSelectorLinkRelation> findByCssSelectorGroup(String cssSelectorGroup);
 
-    boolean saveOrUpdateRelation(String url, String cssSelector);
+    boolean saveOrUpdateRelation(String url, String cssSelectorGroup, String dateCssSelector, String hyperLinkCssSelector, String enabled);
 
     boolean deleteByUrl(String url);
 
-    boolean deleteByCssSelector(String cssSelector);
+    boolean deleteByCssSelectorGroup(String cssSelectorGroup);
 
-    List<String> findCssSelectorsByUrl(String url);
-
-    List<String> findUrlsByCssSelector(String cssSelector);
+    List<String> findUrlsByCssSelectorGroup(String cssSelectorGroup);
 }

@@ -49,40 +49,50 @@ export const newsLinkApi = {
 
   startSingleTask(url) {
     return request({
-      url: `/manager/news-links/${encodeURIComponent(url)}/start-task`,
-      method: 'post'
+      url: '/manager/news-links/start-task',
+      method: 'post',
+      data: { url }
     });
   },
 
   pageTaskLogsByUrl(url, params) {
     return request({
-      url: `/manager/news-links/${encodeURIComponent(url)}/task-logs/page`,
+      url: '/manager/news-links/task-logs/page',
       method: 'post',
-      data: params
+      data: {
+        url: url,
+        ...params
+      }
     });
   },
 
   pageCssSelectorsByUrl(url, params) {
     return request({
-      url: `/manager/news-links/${encodeURIComponent(url)}/css-selectors/page`,
+      url: '/manager/news-links/css-selectors/page',
       method: 'post',
-      data: params
+      data: {
+        url: url,
+        ...params
+      }
     });
   },
 
-  addCssSelector(url, cssSelector) {
+  addCssSelector(url, data) {
     return request({
-      url: `/manager/news-links/${encodeURIComponent(url)}/css-selectors`,
+      url: '/manager/news-links/css-selectors',
       method: 'post',
-      data: { cssSelector }
+      data: {
+        url: url,
+        ...data
+      }
     });
   },
 
-  updateCssSelector(id, cssSelector) {
+  updateCssSelector(id, data) {
     return request({
       url: `/manager/news-links/css-selectors/${id}`,
       method: 'put',
-      data: { cssSelector }
+      data
     });
   },
 

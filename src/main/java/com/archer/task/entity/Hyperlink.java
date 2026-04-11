@@ -16,6 +16,6 @@ public class Hyperlink {
 	
 	private String content;
 
-	private String pattern;
+	private Date date;
 	
 }
