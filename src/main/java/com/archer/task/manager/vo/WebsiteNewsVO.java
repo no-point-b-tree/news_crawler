@@ -11,4 +11,6 @@ public class WebsiteNewsVO {
     private Date publishTime;
     private Date createTime;
     private String sourceUrl;
+    private String status;
+    private String url;
 }

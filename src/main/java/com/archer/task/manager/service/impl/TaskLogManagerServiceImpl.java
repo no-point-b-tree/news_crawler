@@ -148,6 +148,8 @@ public class TaskLogManagerServiceImpl extends ServiceImpl<TaskLogMapper, TaskLo
             vo.setPublishTime(news.getPublishTime());
             vo.setCreateTime(news.getCreateTime());
             vo.setSourceUrl(news.getSourceUrl());
+            vo.setStatus(news.getStatus());
+            vo.setUrl(news.getUrl());
             return vo;
         }).collect(Collectors.toList());
         

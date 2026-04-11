@@ -155,28 +155,49 @@
        @close="handleWebsiteNewsClose"
      >
        <div v-loading="websiteNewsDialog.loading">
-         <el-table :data="websiteNewsDialog.newsData" style="width: 100%">
-           <el-table-column prop="title" label="新闻标题" min-width="200">
-             <template #default="{ row }">
-               <span class="text-truncate" :title="row.title">{{ truncateText(row.title, 30) }}</span>
-             </template>
-           </el-table-column>
-           <el-table-column prop="content" label="新闻内容" min-width="300">
-             <template #default="{ row }">
-               <span class="text-truncate" :title="row.content">{{ truncateText(row.content, 100) }}</span>
-             </template>
-           </el-table-column>
-           <el-table-column prop="publishTime" label="发布时间" width="150">
-             <template #default="{ row }">
-               {{ formatDate(row.publishTime) }}
-             </template>
-           </el-table-column>
-           <el-table-column prop="createTime" label="采集时间" width="150">
-             <template #default="{ row }">
-               {{ formatDate(row.createTime) }}
-             </template>
-           </el-table-column>
-         </el-table>
+          <el-table :data="websiteNewsDialog.newsData" style="width: 100%">
+            <el-table-column prop="title" label="新闻标题" min-width="200">
+              <template #default="{ row }">
+                <span class="text-truncate" :title="row.title">{{ truncateText(row.title, 30) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="content" label="新闻内容" min-width="250">
+              <template #default="{ row }">
+                <span class="text-truncate" :title="row.content">{{ truncateText(row.content, 100) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="100">
+              <template #default="{ row }">
+                <el-tag :type="getStatusTagType(row.status)" size="small">
+                  {{ getStatusText(row.status) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="url" label="文章链接" width="120">
+              <template #default="{ row }">
+                <el-link
+                  v-if="row.url"
+                  :href="row.url"
+                  target="_blank"
+                  type="primary"
+                  :title="row.url"
+                >
+                  查看原文
+                </el-link>
+                <span v-else class="no-link">无链接</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="publishTime" label="发布时间" width="150">
+              <template #default="{ row }">
+                {{ formatDate(row.publishTime) }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="createTime" label="采集时间" width="150">
+              <template #default="{ row }">
+                {{ formatDate(row.createTime) }}
+              </template>
+            </el-table-column>
+          </el-table>
 
          <div class="pagination" v-if="websiteNewsDialog.pagination.total > 0">
            <el-pagination
@@ -383,6 +404,46 @@ const handleWebsiteNewsSizeChange = (size) => {
   fetchWebsiteNews();
 };
 
+const getStatusTagType = (status) => {
+  if (!status) return 'info';
+  switch (status.toLowerCase()) {
+    case 'success':
+    case 'completed':
+    case 'published':
+      return 'success';
+    case 'pending':
+    case 'processing':
+      return 'warning';
+    case 'failed':
+    case 'error':
+      return 'danger';
+    default:
+      return 'info';
+  }
+};
+
+const getStatusText = (status) => {
+  if (!status) return '未知';
+  switch (status.toLowerCase()) {
+    case 'success':
+      return '成功';
+    case 'completed':
+      return '完成';
+    case 'published':
+      return '已发布';
+    case 'pending':
+      return '待处理';
+    case 'processing':
+      return '处理中';
+    case 'failed':
+      return '失败';
+    case 'error':
+      return '错误';
+    default:
+      return status;
+  }
+};
+
 const truncateText = (text, maxLength) => {
   if (!text) return '';
   if (text.length <= maxLength) return text;
@@ -488,6 +549,11 @@ const formatDate = (dateString) => {
   padding: 40px;
   color: #909399;
   font-size: 14px;
+}
+
+.no-link {
+  color: #c0c4cc;
+  font-size: 12px;
 }
 
 
