@@ -37,7 +37,7 @@ public class SingleRssTaskService implements Runnable {
     private final AiTaskComponent aiTaskComponent;
 
 
-    public SingleRssTaskService(String rssUrl, Date startDate, Date endDate, Long taskId, LatestSpiderTaskServiceImpl latestSpiderTaskService, NewsMapper newsMapper, CountDownLatch countDownLatch,AiTaskComponent aiTaskComponent) {
+    public SingleRssTaskService(String rssUrl, Date startDate, Date endDate, Long taskId, LatestSpiderTaskServiceImpl latestSpiderTaskService, NewsMapper newsMapper, CountDownLatch countDownLatch, AiTaskComponent aiTaskComponent) {
         this.rssUrl = rssUrl;
         this.startDate = startDate;
         this.endDate = endDate;
@@ -98,7 +98,8 @@ public class SingleRssTaskService implements Runnable {
             log.error("rss异常:", e);
         } finally {
             countDownLatch.countDown();
-            log.info("剩余任务数量:{}",countDownLatch.getCount());
+            latestSpiderTaskService.release();
+            log.info("剩余任务数量:{}", countDownLatch.getCount());
         }
     }
 }

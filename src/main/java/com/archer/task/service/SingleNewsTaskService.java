@@ -40,7 +40,7 @@ public class SingleNewsTaskService implements Runnable {
     private final AiTaskComponent aiTaskComponent;
 
     public SingleNewsTaskService(NewsLink newsLink, LatestSpiderTaskServiceImpl latestSpiderTaskService, List<CssSelectorLinkRelation> cssSelectorLinkRelationList, NewsMapper newsMapper, Long taskId, CountDownLatch countDownLatch,
-                                 Date startDate, Date endDate,AiTaskComponent aiTaskComponent) {
+                                 Date startDate, Date endDate, AiTaskComponent aiTaskComponent) {
         this.newsLink = newsLink;
         this.latestSpiderTaskService = latestSpiderTaskService;
         this.newsMapper = newsMapper;
@@ -80,7 +80,8 @@ public class SingleNewsTaskService implements Runnable {
             log.error("新闻任务异常", e);
         } finally {
             countDownLatch.countDown();
-            log.info("剩余任务数量:{}",countDownLatch.getCount());
+            latestSpiderTaskService.release();
+            log.info("剩余任务数量:{}", countDownLatch.getCount());
         }
     }
 
