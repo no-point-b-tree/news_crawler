@@ -32,6 +32,8 @@ public class News {
 
     private Long taskId;
 
+    private String zhTitle;
+
     private String isDelete;
 
     private Date publishTime;

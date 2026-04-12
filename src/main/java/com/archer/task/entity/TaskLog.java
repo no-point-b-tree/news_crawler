@@ -26,4 +26,6 @@ public class TaskLog {
 
     private Date endDate;
 
+    private String status;
+
 }

@@ -1,5 +1,6 @@
 package com.archer.task.service;
 
+import com.archer.task.ai.AiTaskComponent;
 import com.archer.task.constant.NewsStatusEnum;
 import com.archer.task.entity.Article;
 import com.archer.task.entity.News;
@@ -33,8 +34,10 @@ public class SingleRssTaskService implements Runnable {
 
     private final Long taskId;
 
+    private final AiTaskComponent aiTaskComponent;
 
-    public SingleRssTaskService(String rssUrl, Date startDate, Date endDate, Long taskId, LatestSpiderTaskServiceImpl latestSpiderTaskService, NewsMapper newsMapper, CountDownLatch countDownLatch) {
+
+    public SingleRssTaskService(String rssUrl, Date startDate, Date endDate, Long taskId, LatestSpiderTaskServiceImpl latestSpiderTaskService, NewsMapper newsMapper, CountDownLatch countDownLatch,AiTaskComponent aiTaskComponent) {
         this.rssUrl = rssUrl;
         this.startDate = startDate;
         this.endDate = endDate;
@@ -42,6 +45,7 @@ public class SingleRssTaskService implements Runnable {
         this.latestSpiderTaskService = latestSpiderTaskService;
         this.newsMapper = newsMapper;
         this.countDownLatch = countDownLatch;
+        this.aiTaskComponent = aiTaskComponent;
     }
 
     @Override
@@ -88,6 +92,7 @@ public class SingleRssTaskService implements Runnable {
                 news.setTaskId(taskId);
                 news.setStatus(NewsStatusEnum.SPIDER_SUCCESS.name());
                 newsMapper.insert(news);
+                aiTaskComponent.startAiTask(news);
             }
         } catch (Exception e) {
             log.error("rss异常:", e);

@@ -1,5 +1,6 @@
 package com.archer.task.service;
 
+import com.archer.task.ai.AiTaskComponent;
 import com.archer.task.constant.NewsStatusEnum;
 import com.archer.task.entity.*;
 import com.archer.task.mapper.NewsMapper;
@@ -36,7 +37,10 @@ public class SingleNewsTaskService implements Runnable {
 
     private final Date endDate;
 
-    public SingleNewsTaskService(NewsLink newsLink, LatestSpiderTaskServiceImpl latestSpiderTaskService, List<CssSelectorLinkRelation> cssSelectorLinkRelationList, NewsMapper newsMapper, Long taskId, CountDownLatch countDownLatch, Date startDate, Date endDate) {
+    private final AiTaskComponent aiTaskComponent;
+
+    public SingleNewsTaskService(NewsLink newsLink, LatestSpiderTaskServiceImpl latestSpiderTaskService, List<CssSelectorLinkRelation> cssSelectorLinkRelationList, NewsMapper newsMapper, Long taskId, CountDownLatch countDownLatch,
+                                 Date startDate, Date endDate,AiTaskComponent aiTaskComponent) {
         this.newsLink = newsLink;
         this.latestSpiderTaskService = latestSpiderTaskService;
         this.newsMapper = newsMapper;
@@ -45,6 +49,7 @@ public class SingleNewsTaskService implements Runnable {
         this.countDownLatch = countDownLatch;
         this.startDate = startDate;
         this.endDate = endDate;
+        this.aiTaskComponent = aiTaskComponent;
 
     }
 
@@ -68,6 +73,7 @@ public class SingleNewsTaskService implements Runnable {
                     article.setPublishDate(hyperLink.getDate());
                     News news = getNews(article);
                     newsMapper.insert(news);
+                    aiTaskComponent.startAiTask(news);
                 }
             }
         } catch (Exception e) {

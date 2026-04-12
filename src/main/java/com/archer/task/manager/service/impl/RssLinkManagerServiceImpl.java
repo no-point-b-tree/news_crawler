@@ -1,5 +1,7 @@
 package com.archer.task.manager.service.impl;
 
+import com.archer.task.ai.AiTaskComponent;
+import com.archer.task.constant.TaskStatusEnum;
 import com.archer.task.entity.RssLink;
 import com.archer.task.entity.TaskLog;
 import com.archer.task.manager.service.RssLinkManagerService;
@@ -9,6 +11,7 @@ import com.archer.task.service.SingleRssTaskService;
 import com.archer.task.service.impl.LatestSpiderTaskServiceImpl;
 import com.archer.task.mapper.NewsMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import jakarta.annotation.Resource;
@@ -35,6 +38,9 @@ public class RssLinkManagerServiceImpl extends ServiceImpl<RssLinkMapper, RssLin
 
     @Resource
     private TaskLogMapper taskLogMapper;
+
+    @Resource
+    private AiTaskComponent aiTaskComponent;
 
     @Override
     public Page<RssLink> pageRssLinks(String keyword, Integer page, Integer size) {
@@ -99,7 +105,7 @@ public class RssLinkManagerServiceImpl extends ServiceImpl<RssLinkMapper, RssLin
             taskLog.setIsDelete("N");
             taskLog.setCreateTime(new Date());
             taskLog.setUpdateTime(new Date());
-
+            taskLog.setStatus(TaskStatusEnum.RUNNING.name());
             // 解析时间范围
             Date startDate;
             Date endDate;
@@ -125,6 +131,8 @@ public class RssLinkManagerServiceImpl extends ServiceImpl<RssLinkMapper, RssLin
             taskLog.setStartDate(startDate);
             taskLog.setEndDate(endDate);
             taskLogMapper.insert(taskLog);
+            CountDownLatch aiCl = new CountDownLatch(1);
+            aiTaskComponent.setTaskCountDown(taskLog.getId(), aiCl);
             SingleRssTaskService task = new SingleRssTaskService(
                     url,
                     startDate,
@@ -132,9 +140,20 @@ public class RssLinkManagerServiceImpl extends ServiceImpl<RssLinkMapper, RssLin
                     taskLog.getId(),
                     LatestSpiderTaskServiceImpl.getInstance(),
                     newsMapper,
-                    new CountDownLatch(1)
+                    aiCl, aiTaskComponent
             );
             new Thread(task).start();
+            new Thread(() -> {
+                try {
+                    aiCl.await();
+                    UpdateWrapper<TaskLog> taskUpdate = new UpdateWrapper<>();
+                    taskUpdate.eq("id", taskLog.getId());
+                    taskUpdate.set("status", TaskStatusEnum.FINISHED.name());
+                    taskLogMapper.update(taskUpdate);
+                } catch (InterruptedException e) {
+                    log.error("Failed to await task countdown");
+                }
+            }).start();
             return true;
         } catch (Exception e) {
             log.error("启动RSS任务失败: {}", url, e);

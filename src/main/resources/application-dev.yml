@@ -23,7 +23,7 @@ deepseek:
     # DeepSeek API端点
     url: https://api.deepseek.com/v1/chat/completions
     # API密钥，请替换为实际的API Key
-    key: your-deepseek-api-key-here
+    key: sk-9caee337915a40d9a73886a37b6daa57
     # 默认模型
     model: deepseek-chat
     # 最大token数

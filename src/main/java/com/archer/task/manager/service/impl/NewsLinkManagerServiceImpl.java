@@ -1,5 +1,7 @@
 package com.archer.task.manager.service.impl;
 
+import com.archer.task.ai.AiTaskComponent;
+import com.archer.task.constant.TaskStatusEnum;
 import com.archer.task.entity.CssSelectorLinkRelation;
 import com.archer.task.entity.NewsLink;
 import com.archer.task.entity.TaskLog;
@@ -14,6 +16,7 @@ import com.archer.task.service.TaskService;
 import com.archer.task.service.impl.LatestSpiderTaskServiceImpl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import jakarta.annotation.Resource;
@@ -50,6 +53,9 @@ public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, News
     @Resource
     private NewsMapper newsMapper;
 
+    @Resource
+    private AiTaskComponent aiTaskComponent;
+
     @Override
     public Page<NewsLink> pageNewsLinks(String keyword, List<String> langs, Integer page, Integer size) {
         Page<NewsLink> pageParam = new Page<>(page == null ? 1 : page, size == null ? 10 : size);
@@ -76,16 +82,16 @@ public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, News
     public Page<com.archer.task.manager.vo.NewsLinkWithCssCountVO> pageNewsLinksWithCssCount(String keyword, List<String> langs, Integer page, Integer size) {
         // 先获取分页的新闻链接
         Page<NewsLink> newsLinkPage = pageNewsLinks(keyword, langs, page, size);
-        
+
         // 转换为包含CSS数量的VO
         Page<com.archer.task.manager.vo.NewsLinkWithCssCountVO> resultPage = new Page<>(
-            newsLinkPage.getCurrent(), 
-            newsLinkPage.getSize(), 
-            newsLinkPage.getTotal()
+                newsLinkPage.getCurrent(),
+                newsLinkPage.getSize(),
+                newsLinkPage.getTotal()
         );
         resultPage.setRecords(newsLinkPage.getRecords().stream().map(newsLink -> {
             com.archer.task.manager.vo.NewsLinkWithCssCountVO vo = new com.archer.task.manager.vo.NewsLinkWithCssCountVO();
-            
+
             // 复制NewsLink属性
             vo.setId(newsLink.getId());
             vo.setDomain(newsLink.getDomain());
@@ -95,17 +101,17 @@ public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, News
             vo.setLang(newsLink.getLang());
             vo.setCreateTime(newsLink.getCreateTime());
             vo.setUpdateTime(newsLink.getUpdateTime());
-            
+
             // 查询CSS选择器数量
             LambdaQueryWrapper<CssSelectorLinkRelation> cssQueryWrapper = new LambdaQueryWrapper<>();
             cssQueryWrapper.eq(CssSelectorLinkRelation::getUrl, newsLink.getUrl())
-                          .eq(CssSelectorLinkRelation::getIsDelete, "N");
-            
+                    .eq(CssSelectorLinkRelation::getIsDelete, "N");
+
             List<CssSelectorLinkRelation> cssSelectors = cssSelectorLinkRelationMapper.selectList(cssQueryWrapper);
-            
+
             // 计算总数
             vo.setCssSelectorCount(cssSelectors.size());
-            
+
             // 计算启用和禁用的数量
             long enabledCount = cssSelectors.stream()
                     .filter(css -> "ON".equals(css.getEnabled()))
@@ -113,13 +119,13 @@ public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, News
             long disabledCount = cssSelectors.stream()
                     .filter(css -> "OFF".equals(css.getEnabled()))
                     .count();
-            
+
             vo.setEnabledCssSelectorCount((int) enabledCount);
             vo.setDisabledCssSelectorCount((int) disabledCount);
-            
+
             return vo;
         }).toList());
-        
+
         return resultPage;
     }
 
@@ -141,22 +147,22 @@ public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, News
     public List<com.archer.task.manager.controller.LocaleController.LocaleInfo> getLocaleLanguages() {
         // 获取Java Locale支持的语言
         Locale[] availableLocales = Locale.getAvailableLocales();
-        
+
         // 提取唯一的语言代码和显示名称
         Map<String, String> languageMap = new TreeMap<>();
         for (Locale locale : availableLocales) {
             String language = locale.getLanguage();
             String displayLanguage = locale.getDisplayLanguage(Locale.ENGLISH);
-            
+
             if (!language.isEmpty() && !displayLanguage.isEmpty()) {
                 languageMap.put(language, displayLanguage);
             }
         }
-        
+
         // 转换为LocaleInfo列表
         return languageMap.entrySet().stream()
                 .map(entry -> new com.archer.task.manager.controller.LocaleController.LocaleInfo(
-                        entry.getKey(), 
+                        entry.getKey(),
                         entry.getValue()))
                 .sorted(Comparator.comparing(com.archer.task.manager.controller.LocaleController.LocaleInfo::getDisplayName))
                 .collect(Collectors.toList());
@@ -205,6 +211,7 @@ public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, News
             taskLog.setIsDelete("N");
             taskLog.setCreateTime(new Date());
             taskLog.setUpdateTime(new Date());
+            taskLog.setStatus(TaskStatusEnum.RUNNING.name());
             // 解析时间范围
             Date startDate;
             Date endDate;
@@ -237,8 +244,21 @@ public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, News
             wrapper.last("limit 1");
             NewsLink newsLink = newsLinkMapper.selectOne(wrapper);
             List<CssSelectorLinkRelation> cssSelectors = cssSelectorLinkRelationService.findByUrl(newsLink.getUrl());
-            SingleNewsTaskService singleNewsTaskService = new SingleNewsTaskService(newsLink, LatestSpiderTaskServiceImpl.getInstance(), cssSelectors, newsMapper, taskId, new CountDownLatch(1), startDate, endDate);
+            CountDownLatch aiCl = new CountDownLatch(1);
+            aiTaskComponent.setTaskCountDown(taskLog.getId(), aiCl);
+            SingleNewsTaskService singleNewsTaskService = new SingleNewsTaskService(newsLink, LatestSpiderTaskServiceImpl.getInstance(), cssSelectors, newsMapper, taskId, new CountDownLatch(1), startDate, endDate, aiTaskComponent);
             new Thread(singleNewsTaskService).start();
+            new Thread(() -> {
+                try {
+                    aiCl.await();
+                    UpdateWrapper<TaskLog> taskUpdate = new UpdateWrapper<>();
+                    taskUpdate.eq("id", taskLog.getId());
+                    taskUpdate.set("status", TaskStatusEnum.FINISHED.name());
+                    taskLogMapper.update(taskUpdate);
+                } catch (InterruptedException e) {
+                    log.error("Failed to await task countdown");
+                }
+            }).start();
             return true;
         } catch (Exception e) {
             log.error("Failed to start single task for url: {}", url, e);

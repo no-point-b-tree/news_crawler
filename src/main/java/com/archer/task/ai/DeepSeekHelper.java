@@ -10,6 +10,7 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -34,14 +35,15 @@ public class DeepSeekHelper implements AiHelper {
             // 构建请求体
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("model", deepSeekConfig.getModel());
-            
+
             Map<String, String> message = new HashMap<>();
             message.put("role", "user");
             message.put("content", prompt);
             requestBody.put("messages", new Map[]{message});
-            
+
             requestBody.put("max_tokens", deepSeekConfig.getMaxTokens());
             requestBody.put("temperature", deepSeekConfig.getTemperature());
+            requestBody.put("response_format", Collections.singletonMap("type","json_object"));
 
             // 设置请求头
             HttpHeaders headers = new HttpHeaders();
@@ -65,14 +67,14 @@ public class DeepSeekHelper implements AiHelper {
             if (response.getStatusCode() == HttpStatus.OK) {
                 String responseBody = response.getBody();
                 log.debug("DeepSeek API响应: {}", responseBody);
-                
+
                 // 解析响应，提取AI回复内容
                 JsonNode rootNode = objectMapper.readTree(responseBody);
                 JsonNode choices = rootNode.path("choices");
                 if (choices.isArray() && choices.size() > 0) {
                     JsonNode messageNode = choices.get(0).path("message");
                     String content = messageNode.path("content").asText();
-                    
+
                     // 尝试解析为JSON，如果不是JSON则包装为JSON
                     try {
                         // 验证是否是有效的JSON
@@ -99,43 +101,45 @@ public class DeepSeekHelper implements AiHelper {
 
     /**
      * 专门用于处理HTML分析任务的方法
+     *
      * @param htmlContent HTML内容
      * @return 分析结果的JSON字符串
      */
     public String analyzeHtmlContent(String htmlContent) {
         String prompt = String.format("""
-            请分析以下HTML内容，提取文章卡片、超链接和日期信息，并识别日期对应的Java日期格式pattern。
-            要求返回JSON格式，包含以下字段：
-            1. cssSelectorGroup: 文章卡片的CSS选择器（超链接和日期共同的前面公用元素的css选择器路径）
-            2. hyperLinkCssSelector: 超链接的CSS选择器
-            3. dateCssSelector: 日期的CSS选择器
-            4. datePattern: 日期对应的Java日期格式pattern（如：yyyy-MM-dd HH:mm:ss）
-            
-            HTML内容：
-            %s
-            
-            请只返回JSON格式的结果，不要包含其他说明文字。
-            """, htmlContent.substring(0, Math.min(htmlContent.length(), 10000))); // 限制HTML长度
-        
+                请分析以下HTML内容，提取文章卡片、超链接和日期信息，并识别日期对应的Java日期格式pattern。
+                要求返回JSON格式，包含以下字段：
+                1. cssSelectorGroup: 文章卡片的CSS选择器（超链接和日期共同的前面公用元素的css选择器路径）
+                2. hyperLinkCssSelector: 超链接的CSS选择器
+                3. dateCssSelector: 日期的CSS选择器
+                4. datePattern: 日期对应的Java日期格式pattern（如：yyyy-MM-dd HH:mm:ss）
+                
+                HTML内容：
+                %s
+                
+                请只返回JSON格式的结果，不要包含其他说明文字。
+                """, htmlContent.substring(0, Math.min(htmlContent.length(), 10000))); // 限制HTML长度
+
         return processWithAi(prompt);
     }
 
     /**
      * 通用文本处理
-     * @param text 输入文本
+     *
+     * @param text        输入文本
      * @param instruction 处理指令
      * @return 处理结果的JSON字符串
      */
     public String processText(String text, String instruction) {
         String prompt = String.format("""
-            %s
-            
-            输入文本：
-            %s
-            
-            请处理以上文本，并返回JSON格式的结果。
-            """, instruction, text);
-        
+                %s
+                
+                输入文本：
+                %s
+                
+                请处理以上文本，并返回JSON格式的结果。
+                """, instruction, text);
+
         return processWithAi(prompt);
     }
 }
