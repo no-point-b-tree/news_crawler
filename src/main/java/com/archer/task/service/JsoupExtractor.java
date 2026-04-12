@@ -19,7 +19,7 @@ public class JsoupExtractor {
 
     public static List<String> MATCH_RULE_LIST = Arrays.asList("\\d+小时前", "\\d+分钟前", "\\d+\\s+mins?\\s+ago", "\\d+\\s+hours?\\s+ago");
 
-    public static List<Hyperlink> extractor(String htmlContent, List<CssSelectorLinkRelation> cssSelectorList) {
+    public static List<Hyperlink> extractor(String htmlContent, List<CssSelectorLinkRelation> cssSelectorList, Locale locale) {
         if (htmlContent == null) {
             return Collections.emptyList();
         }
@@ -56,7 +56,7 @@ public class JsoupExtractor {
                                 String datePattern = cssSelectorLinkRelation.getDatePattern();
                                 if (datePattern != null && !datePattern.trim().isEmpty() && hyperlink.getDate() == null) {
                                     try {
-                                        Date publishDate = DateUtils.parseDate(date.text().trim(), datePattern);
+                                        Date publishDate = DateUtils.parseDate(date.text().trim(), locale, datePattern);
                                         hyperlink.setDate(publishDate);
                                     } catch (Exception e) {
                                         log.warn("使用自定义日期模式解析失败: {}, pattern: {}", date.text(), datePattern);
@@ -66,7 +66,9 @@ public class JsoupExtractor {
                             } catch (Exception e) {
                                 log.error("日期转换失败:", e);
                             }
-                            hyperlinkListAll.add(hyperlink);
+                            if (hyperlink.getDate() != null) {
+                                hyperlinkListAll.add(hyperlink);
+                            }
                         }
                     }
 

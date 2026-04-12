@@ -1,8 +1,10 @@
 package com.archer.task.manager.service.impl;
 
 import com.archer.task.entity.RssLink;
+import com.archer.task.entity.TaskLog;
 import com.archer.task.manager.service.RssLinkManagerService;
 import com.archer.task.mapper.RssLinkMapper;
+import com.archer.task.mapper.TaskLogMapper;
 import com.archer.task.service.SingleRssTaskService;
 import com.archer.task.service.impl.LatestSpiderTaskServiceImpl;
 import com.archer.task.mapper.NewsMapper;
@@ -31,25 +33,26 @@ public class RssLinkManagerServiceImpl extends ServiceImpl<RssLinkMapper, RssLin
     @Resource
     private NewsMapper newsMapper;
 
-    private final ExecutorService executorService = Executors.newFixedThreadPool(2);
+    @Resource
+    private TaskLogMapper taskLogMapper;
 
     @Override
     public Page<RssLink> pageRssLinks(String keyword, Integer page, Integer size) {
         Page<RssLink> pageParam = new Page<>(page, size);
         LambdaQueryWrapper<RssLink> queryWrapper = new LambdaQueryWrapper<>();
-        
+
         queryWrapper.eq(RssLink::getIsDelete, "N");
-        
+
         if (StringUtils.hasText(keyword)) {
             queryWrapper.and(wrapper -> wrapper
-                .like(RssLink::getUrl, keyword)
-                .or()
-                .like(RssLink::getDomain, keyword)
+                    .like(RssLink::getUrl, keyword)
+                    .or()
+                    .like(RssLink::getDomain, keyword)
             );
         }
-        
+
         queryWrapper.orderByDesc(RssLink::getCreateTime);
-        
+
         return rssLinkMapper.selectPage(pageParam, queryWrapper);
     }
 
@@ -88,23 +91,50 @@ public class RssLinkManagerServiceImpl extends ServiceImpl<RssLinkMapper, RssLin
     }
 
     @Override
-    public boolean startRssTask(String url) {
+    public boolean startRssTask(String url, String startDateStr, String endDateStr) {
         try {
-            Date current = new Date();
-            Date startDate = DateUtils.addDays(current, -1);
-            CountDownLatch countDownLatch = new CountDownLatch(1);
-            
+            // 创建任务日志记录
+            TaskLog taskLog = new TaskLog();
+            taskLog.setTaskType("RSS_MANUAL");
+            taskLog.setIsDelete("N");
+            taskLog.setCreateTime(new Date());
+            taskLog.setUpdateTime(new Date());
+
+            // 解析时间范围
+            Date startDate;
+            Date endDate;
+            if (startDateStr != null && !startDateStr.trim().isEmpty() &&
+                    endDateStr != null && !endDateStr.trim().isEmpty()) {
+                // 使用前端传递的时间范围
+                try {
+                    startDate = DateUtils.parseDate(startDateStr + " 00:00:00", "yyyy-MM-dd HH:mm:ss");
+                    endDate = DateUtils.parseDate(endDateStr + " 23:59:59", "yyyy-MM-dd HH:mm:ss");
+                } catch (Exception e) {
+                    log.error("Failed to parse date range: startDate={}, endDate={}", startDateStr, endDateStr, e);
+                    // 如果解析失败，使用默认值（前一天到今天）
+                    Date current = new Date();
+                    startDate = DateUtils.addDays(current, -1);
+                    endDate = current;
+                }
+            } else {
+                // 使用默认值（前一天到今天）
+                Date current = new Date();
+                startDate = DateUtils.addDays(current, -1);
+                endDate = current;
+            }
+            taskLog.setStartDate(startDate);
+            taskLog.setEndDate(endDate);
+            taskLogMapper.insert(taskLog);
             SingleRssTaskService task = new SingleRssTaskService(
-                url, 
-                startDate, 
-                current, 
-                new LatestSpiderTaskServiceImpl(), 
-                newsMapper, 
-                countDownLatch
+                    url,
+                    startDate,
+                    endDate,
+                    taskLog.getId(),
+                    LatestSpiderTaskServiceImpl.getInstance(),
+                    newsMapper,
+                    new CountDownLatch(1)
             );
-            
-            executorService.execute(task);
-            countDownLatch.await();
+            new Thread(task).start();
             return true;
         } catch (Exception e) {
             log.error("启动RSS任务失败: {}", url, e);

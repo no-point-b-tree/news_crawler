@@ -14,5 +14,5 @@ public interface RssLinkManagerService extends IService<RssLink> {
 
     boolean deleteRssLink(Long id);
 
-    boolean startRssTask(String url);
+    boolean startRssTask(String url, String startDate, String endDate);
 }

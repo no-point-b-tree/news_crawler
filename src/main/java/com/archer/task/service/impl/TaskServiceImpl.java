@@ -58,12 +58,12 @@ public class TaskServiceImpl implements TaskService {
             List<NewsLink> newsLinks = newsLinkMapper.selectList(newsQuery);
             CountDownLatch countDownLatch = new CountDownLatch(rssLinkList.size() + newsLinks.size());
             for (String rssLink : rssLinkList) {
-                SingleRssTaskService task = new SingleRssTaskService(rssLink, startDate, current, new LatestSpiderTaskServiceImpl(), newsMapper, countDownLatch);
+                SingleRssTaskService task = new SingleRssTaskService(rssLink, startDate, current, taskLog.getId(), LatestSpiderTaskServiceImpl.getInstance(), newsMapper, countDownLatch);
                 threadPool.execute(task);
             }
             for (NewsLink newsLink : newsLinks) {
                 List<CssSelectorLinkRelation> cssSelectors = cssSelectorLinkRelationService.findByUrl(newsLink.getUrl());
-                SingleNewsTaskService task = new SingleNewsTaskService(newsLink, new LatestSpiderTaskServiceImpl(), cssSelectors
+                SingleNewsTaskService task = new SingleNewsTaskService(newsLink, LatestSpiderTaskServiceImpl.getInstance(), cssSelectors
                         , newsMapper, taskLog.getId(), countDownLatch, startDate, current);
                 threadPool.execute(task);
             }

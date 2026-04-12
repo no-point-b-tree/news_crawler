@@ -32,11 +32,11 @@ export const rssLinkApi = {
     });
   },
 
-  startRssTask(url) {
+  startRssTask(url, startDate, endDate) {
     return request({
       url: '/manager/rss-links/start-task',
       method: 'post',
-      data: { url }
+      data: { url, startDate, endDate }
     });
   }
 };

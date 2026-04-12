@@ -142,6 +142,50 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- 任务时间选择对话框 -->
+    <el-dialog
+      v-model="taskTimeDialog.visible"
+      :title="'设置任务时间范围'"
+      width="500px"
+      :close-on-click-modal="false"
+      :close-on-press-escape="false"
+    >
+      <el-form
+        ref="taskTimeFormRef"
+        :model="taskTimeDialog.formData"
+        :rules="taskTimeRules"
+        label-width="100px"
+      >
+        <el-form-item label="开始日期" prop="startDate">
+          <el-date-picker
+            v-model="taskTimeDialog.formData.startDate"
+            type="date"
+            placeholder="选择开始日期"
+            value-format="YYYY-MM-DD"
+            style="width: 100%"
+          />
+        </el-form-item>
+        <el-form-item label="结束日期" prop="endDate">
+          <el-date-picker
+            v-model="taskTimeDialog.formData.endDate"
+            type="date"
+            placeholder="选择结束日期"
+            value-format="YYYY-MM-DD"
+            style="width: 100%"
+          />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="taskTimeDialog.visible = false">取消</el-button>
+          <el-button type="primary" @click="handleTaskTimeSubmit" :loading="taskTimeDialog.loading">
+            确定
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -176,6 +220,19 @@ const formData = reactive({
   domain: ''
 });
 
+// 任务时间对话框
+const taskTimeDialog = reactive({
+  visible: false,
+  loading: false,
+  currentUrl: '',
+  formData: {
+    startDate: '',
+    endDate: ''
+  }
+});
+
+const taskTimeFormRef = ref();
+
 const formRules = {
   url: [
     { required: true, message: '请输入URL', trigger: 'blur' },
@@ -184,6 +241,15 @@ const formRules = {
   domain: [
     { required: true, message: '请输入域名', trigger: 'blur' },
     { min: 1, max: 100, message: '长度在 1 到 100 个字符', trigger: 'blur' }
+  ]
+};
+
+const taskTimeRules = {
+  startDate: [
+    { required: true, message: '请选择开始日期', trigger: 'change' }
+  ],
+  endDate: [
+    { required: true, message: '请选择结束日期', trigger: 'change' }
   ]
 };
 
@@ -328,12 +394,66 @@ const handleDelete = async (row) => {
   }
 };
 
-const handleStartTask = async (row) => {
+const handleStartTask = (row) => {
+  // 设置默认时间：如果当前时间是凌晨（0-6点），则使用前天到昨天
+  // 否则使用昨天到今天
+  const now = new Date();
+  const currentHour = now.getHours();
+  
+  let endDate, startDate;
+  
+  if (currentHour < 6) {
+    // 凌晨时间：使用前天到昨天
+    endDate = new Date(now);
+    endDate.setDate(endDate.getDate() - 1); // 昨天
+    startDate = new Date(endDate);
+    startDate.setDate(startDate.getDate() - 1); // 前天
+  } else {
+    // 白天时间：使用昨天到今天
+    endDate = new Date(now); // 今天
+    startDate = new Date(now);
+    startDate.setDate(startDate.getDate() - 1); // 昨天
+  }
+  
+  // 格式化日期为 YYYY-MM-DD（使用本地时间）
+  const formatDate = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
+  taskTimeDialog.currentUrl = row.url;
+  taskTimeDialog.formData.startDate = formatDate(startDate);
+  taskTimeDialog.formData.endDate = formatDate(endDate);
+  taskTimeDialog.visible = true;
+  
+  if (taskTimeFormRef.value) {
+    taskTimeFormRef.value.clearValidate();
+  }
+};
+
+const handleTaskTimeSubmit = async () => {
   try {
-    await rssLinkApi.startRssTask(row.url);
-    ElMessage.success('任务已启动');
+    await taskTimeFormRef.value.validate();
+    
+    taskTimeDialog.loading = true;
+    
+    // 调用API启动任务，传递时间范围参数
+    await rssLinkApi.startRssTask(
+      taskTimeDialog.currentUrl,
+      taskTimeDialog.formData.startDate,
+      taskTimeDialog.formData.endDate
+    );
+    
+    ElMessage.success('任务已提交，正在后台执行');
+    taskTimeDialog.visible = false;
+    taskTimeDialog.loading = false;
   } catch (error) {
-    ElMessage.error('启动任务失败');
+    taskTimeDialog.loading = false;
+    if (error !== 'cancel') {
+      ElMessage.error('启动任务失败');
+    }
   }
 };
 

@@ -8,6 +8,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import com.microsoft.playwright.options.LoadState;
 import org.jsoup.Jsoup;
@@ -32,6 +35,35 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class LatestSpiderTaskServiceImpl implements LatestSpiderTaskService {
+
+    private static final ArrayBlockingQueue<LatestSpiderTaskServiceImpl> queue = new ArrayBlockingQueue<>(10);
+
+    static {
+        for (int i = 0; i < queue.remainingCapacity(); i++) {
+            queue.add(new LatestSpiderTaskServiceImpl());
+        }
+    }
+
+    public static LatestSpiderTaskServiceImpl getInstance() {
+        try {
+            return queue.take();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void release() {
+        // 把自己还回到池子
+        try {
+            queue.put(this);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private LatestSpiderTaskServiceImpl() {
+
+    }
 
     private final Playwright playwright;
 

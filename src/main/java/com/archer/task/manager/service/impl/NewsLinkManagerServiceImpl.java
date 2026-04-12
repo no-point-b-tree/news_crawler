@@ -237,7 +237,7 @@ public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, News
             wrapper.last("limit 1");
             NewsLink newsLink = newsLinkMapper.selectOne(wrapper);
             List<CssSelectorLinkRelation> cssSelectors = cssSelectorLinkRelationService.findByUrl(newsLink.getUrl());
-            SingleNewsTaskService singleNewsTaskService = new SingleNewsTaskService(newsLink, new LatestSpiderTaskServiceImpl(), cssSelectors, newsMapper, taskId, new CountDownLatch(1), startDate, endDate);
+            SingleNewsTaskService singleNewsTaskService = new SingleNewsTaskService(newsLink, LatestSpiderTaskServiceImpl.getInstance(), cssSelectors, newsMapper, taskId, new CountDownLatch(1), startDate, endDate);
             new Thread(singleNewsTaskService).start();
             return true;
         } catch (Exception e) {

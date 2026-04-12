@@ -11,6 +11,7 @@ import org.apache.commons.lang3.time.DateUtils;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 
 /**
@@ -35,8 +36,7 @@ public class SingleNewsTaskService implements Runnable {
 
     private final Date endDate;
 
-    public SingleNewsTaskService(NewsLink newsLink, LatestSpiderTaskServiceImpl latestSpiderTaskService, List<CssSelectorLinkRelation> cssSelectorLinkRelationList
-            , NewsMapper newsMapper, Long taskId, CountDownLatch countDownLatch, Date startDate, Date endDate) {
+    public SingleNewsTaskService(NewsLink newsLink, LatestSpiderTaskServiceImpl latestSpiderTaskService, List<CssSelectorLinkRelation> cssSelectorLinkRelationList, NewsMapper newsMapper, Long taskId, CountDownLatch countDownLatch, Date startDate, Date endDate) {
         this.newsLink = newsLink;
         this.latestSpiderTaskService = latestSpiderTaskService;
         this.newsMapper = newsMapper;
@@ -51,8 +51,13 @@ public class SingleNewsTaskService implements Runnable {
     @Override
     public void run() {
         try {
+            if (newsMapper.getCountByUrl(newsLink.getUrl()) > 0) {
+                return;
+            }
+            String lang = newsLink.getLang();
+            Locale locale = new Locale(lang);
             Article newsPageContent = latestSpiderTaskService.getArticleContent(newsLink.getUrl());
-            List<Hyperlink> hyperLinks = JsoupExtractor.extractor(newsPageContent.getContent(), cssSelectorLinkRelationList);
+            List<Hyperlink> hyperLinks = JsoupExtractor.extractor(newsPageContent.getContent(), cssSelectorLinkRelationList, locale);
             for (Hyperlink hyperLink : hyperLinks) {
                 if (isValidDate(startDate, endDate, hyperLink.getDate())) {
                     if (hyperLink.getHref().startsWith("/")) {
@@ -103,9 +108,7 @@ public class SingleNewsTaskService implements Runnable {
                 } catch (Exception e2) {
                     log.warn("Fallback Tika conversion also failed, using basic regex cleanup for URL: {}", article.getUrl(), e2);
                     // 最后的回退：基本正则清理
-                    news.setTikaContent(TikaUtil.toCompactText(
-                            article.getContent().replaceAll("<[^>]+>", " ")
-                    ));
+                    news.setTikaContent(TikaUtil.toCompactText(article.getContent().replaceAll("<[^>]+>", " ")));
                 }
             }
         }

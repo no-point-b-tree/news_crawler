@@ -48,7 +48,11 @@ public class RssLinkManagerController {
 
     @PostMapping("/start-task")
     public ResponseEntity<Boolean> startRssTask(@RequestBody UrlRequest request) {
-        boolean result = rssLinkManagerService.startRssTask(request.getUrl());
+        boolean result = rssLinkManagerService.startRssTask(
+            request.getUrl(), 
+            request.getStartDate(), 
+            request.getEndDate()
+        );
         return ResponseEntity.ok(result);
     }
 }
