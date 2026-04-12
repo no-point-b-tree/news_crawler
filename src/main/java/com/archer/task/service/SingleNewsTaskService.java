@@ -10,6 +10,7 @@ import com.archer.task.util.UrlUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.time.DateUtils;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -39,8 +40,7 @@ public class SingleNewsTaskService implements Runnable {
 
     private final AiTaskComponent aiTaskComponent;
 
-    public SingleNewsTaskService(NewsLink newsLink, LatestSpiderTaskServiceImpl latestSpiderTaskService, List<CssSelectorLinkRelation> cssSelectorLinkRelationList, NewsMapper newsMapper, Long taskId, CountDownLatch countDownLatch,
-                                 Date startDate, Date endDate, AiTaskComponent aiTaskComponent) {
+    public SingleNewsTaskService(NewsLink newsLink, LatestSpiderTaskServiceImpl latestSpiderTaskService, List<CssSelectorLinkRelation> cssSelectorLinkRelationList, NewsMapper newsMapper, Long taskId, CountDownLatch countDownLatch, Date startDate, Date endDate, AiTaskComponent aiTaskComponent) {
         this.newsLink = newsLink;
         this.latestSpiderTaskService = latestSpiderTaskService;
         this.newsMapper = newsMapper;
@@ -63,6 +63,7 @@ public class SingleNewsTaskService implements Runnable {
             Locale locale = new Locale(lang);
             Article newsPageContent = latestSpiderTaskService.getArticleContent(newsLink.getUrl());
             List<Hyperlink> hyperLinks = JsoupExtractor.extractor(newsPageContent.getContent(), cssSelectorLinkRelationList, locale);
+            List<News> newsList = new ArrayList<>();
             for (Hyperlink hyperLink : hyperLinks) {
                 if (isValidDate(startDate, endDate, hyperLink.getDate())) {
                     if (hyperLink.getHref().startsWith("/")) {
@@ -73,9 +74,10 @@ public class SingleNewsTaskService implements Runnable {
                     article.setPublishDate(hyperLink.getDate());
                     News news = getNews(article);
                     newsMapper.insert(news);
-                    aiTaskComponent.startAiTask(news);
+                    newsList.add(news);
                 }
             }
+            aiTaskComponent.startAiTask(newsList, taskId);
         } catch (Exception e) {
             log.error("新闻任务异常", e);
         } finally {

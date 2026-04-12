@@ -9,6 +9,7 @@ import com.archer.task.service.impl.LatestSpiderTaskServiceImpl;
 import com.archer.task.util.TikaUtil;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -53,6 +54,7 @@ public class SingleRssTaskService implements Runnable {
         // 一个网站回来的所有文章 插入
         try {
             List<Article> rssResult = latestSpiderTaskService.getRssResult(Collections.singletonList(rssUrl), startDate, endDate);
+            List<News> newsList = new ArrayList<>();
             for (Article article : rssResult) {
                 if (newsMapper.getCountByUrl(article.getUrl()) > 0) {
                     continue;
@@ -92,8 +94,9 @@ public class SingleRssTaskService implements Runnable {
                 news.setTaskId(taskId);
                 news.setStatus(NewsStatusEnum.SPIDER_SUCCESS.name());
                 newsMapper.insert(news);
-                aiTaskComponent.startAiTask(news);
+                newsList.add(news);
             }
+            aiTaskComponent.startAiTask(newsList, taskId);
         } catch (Exception e) {
             log.error("rss异常:", e);
         } finally {
