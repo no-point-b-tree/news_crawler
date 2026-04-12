@@ -98,6 +98,7 @@ public class SingleRssTaskService implements Runnable {
             log.error("rss异常:", e);
         } finally {
             countDownLatch.countDown();
+            log.info("剩余任务数量:{}",countDownLatch.getCount());
         }
     }
 }

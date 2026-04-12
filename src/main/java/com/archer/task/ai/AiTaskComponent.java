@@ -90,6 +90,7 @@ public class AiTaskComponent {
             CountDownLatch cl = taskCountDown.get(news.getId());
             if (cl != null) {
                 cl.countDown();
+                log.info("剩余AI任务数量:{}", cl.getCount());
                 if (cl.getCount() == 0) {
                     taskCountDown.remove(news.getId());
                 }

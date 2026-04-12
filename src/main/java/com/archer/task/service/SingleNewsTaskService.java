@@ -80,6 +80,7 @@ public class SingleNewsTaskService implements Runnable {
             log.error("新闻任务异常", e);
         } finally {
             countDownLatch.countDown();
+            log.info("剩余任务数量:{}",countDownLatch.getCount());
         }
     }
 

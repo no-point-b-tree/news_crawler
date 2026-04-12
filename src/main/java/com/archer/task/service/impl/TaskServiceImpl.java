@@ -44,7 +44,7 @@ public class TaskServiceImpl implements TaskService {
     private AiTaskComponent aiTaskComponent;
 
 
-    private final ThreadPoolExecutor threadPool = new ThreadPoolExecutor(4, 8, 60, TimeUnit.SECONDS, queue, new BasicThreadFactory.Builder().namingPattern("spider-%d").build());
+    private final ThreadPoolExecutor threadPool = new ThreadPoolExecutor(6, 8, 60, TimeUnit.SECONDS, queue, new BasicThreadFactory.Builder().namingPattern("spider-%d").build());
 
     @Override
     public void startTask() {
