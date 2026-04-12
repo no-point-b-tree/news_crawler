@@ -56,6 +56,9 @@ public class TaskServiceImpl implements TaskService {
             taskLog.setStartDate(startDate);
             taskLog.setEndDate(current);
             taskLog.setStatus(TaskStatusEnum.RUNNING.name());
+            taskLog.setCreateTime(new Date());
+            taskLog.setUpdateTime(new Date());
+            taskLog.setIsDelete("N");
             taskLogService.save(taskLog);
             QueryWrapper<RssLink> rssLinkQuery = new QueryWrapper<>();
             rssLinkQuery.eq("is_delete", "N");
@@ -81,6 +84,7 @@ public class TaskServiceImpl implements TaskService {
             UpdateWrapper<TaskLog> taskUpdate = new UpdateWrapper<>();
             taskUpdate.eq("id", taskLog.getId());
             taskUpdate.set("status", TaskStatusEnum.FINISHED.name());
+            taskUpdate.set("update_time", new Date());
             taskLogService.update(taskUpdate);
         } catch (Exception e) {
             log.error("task error", e);

@@ -39,10 +39,11 @@
                       />
                     </el-form-item>
                   </el-col>
-                  <el-col :xs="24" :sm="24" :md="8" :lg="6">
+                   <el-col :xs="24" :sm="24" :md="8" :lg="6">
                     <el-form-item>
                       <el-button type="primary" @click="handleSearch">查询</el-button>
                       <el-button @click="handleReset">重置</el-button>
+
                     </el-form-item>
                   </el-col>
                 </el-row>
@@ -79,10 +80,21 @@
                     {{ formatDate(row.createTime) }}
                   </template>
                 </el-table-column>
-                <el-table-column label="操作" width="180" fixed="right">
+                <el-table-column label="操作" width="250" fixed="right">
                   <template #default="{ row }">
                     <div class="action-buttons">
                       <el-button type="primary" size="small" @click="handleViewDetails(row)">查看详情</el-button>
+                      <el-dropdown @command="(command) => handleTaskExport(row, command)" size="small" style="margin-left: 5px;">
+                        <el-button type="success" size="small">
+                          导出<el-icon class="el-icon--right"><arrow-down /></el-icon>
+                        </el-button>
+                        <template #dropdown>
+                          <el-dropdown-menu>
+                            <el-dropdown-item command="pdf">导出为PDF</el-dropdown-item>
+                            <el-dropdown-item command="json">导出为JSON</el-dropdown-item>
+                          </el-dropdown-menu>
+                        </template>
+                      </el-dropdown>
                       <el-button type="danger" size="small" @click="handleDelete(row)">删除</el-button>
                     </div>
                   </template>
@@ -147,33 +159,45 @@
        </div>
      </el-dialog>
 
-     <!-- 网站新闻详情对话框 -->
-     <el-dialog
-       v-model="websiteNewsDialog.visible"
-       :title="websiteNewsDialog.title"
-       width="1000px"
-       @close="handleWebsiteNewsClose"
-     >
+      <!-- 网站新闻详情对话框 -->
+      <el-dialog
+        v-model="websiteNewsDialog.visible"
+        :title="websiteNewsDialog.title"
+        width="1200px"
+        @close="handleWebsiteNewsClose"
+      >
        <div v-loading="websiteNewsDialog.loading">
-          <el-table :data="websiteNewsDialog.newsData" style="width: 100%">
-            <el-table-column prop="title" label="新闻标题" min-width="200">
-              <template #default="{ row }">
-                <span class="text-truncate" :title="row.title">{{ truncateText(row.title, 30) }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column prop="content" label="新闻内容" min-width="250">
-              <template #default="{ row }">
-                <span class="text-truncate" :title="row.content">{{ truncateText(row.content, 100) }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column prop="status" label="状态" width="100">
-              <template #default="{ row }">
-                <el-tag :type="getStatusTagType(row.status)" size="small">
-                  {{ getStatusText(row.status) }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="url" label="文章链接" width="120">
+           <el-table :data="websiteNewsDialog.newsData" style="width: 100%">
+              <el-table-column prop="zhTitle" label="中文标题" min-width="180">
+                <template #default="{ row }">
+                  <span class="text-truncate" :title="row.zhTitle || row.title">
+                    {{ truncateText(row.zhTitle || row.title, 25) }}
+                  </span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="summary" label="摘要" min-width="200">
+                <template #default="{ row }">
+                  <span class="text-truncate" :title="row.summary">{{ truncateText(row.summary, 80) }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="content" label="新闻内容" min-width="200">
+                <template #default="{ row }">
+                  <span class="text-truncate" :title="row.content">{{ truncateText(row.content, 80) }}</span>
+                </template>
+              </el-table-column>
+             <el-table-column prop="status" label="状态" width="100">
+               <template #default="{ row }">
+                 <el-tag :type="getStatusTagType(row.status)" size="small">
+                   {{ getStatusText(row.status) }}
+                 </el-tag>
+               </template>
+             </el-table-column>
+             <el-table-column prop="source" label="来源" width="120">
+               <template #default="{ row }">
+                 <span class="text-truncate" :title="row.source">{{ truncateText(row.source, 15) }}</span>
+               </template>
+             </el-table-column>
+             <el-table-column prop="url" label="文章链接" width="120">
               <template #default="{ row }">
                 <el-link
                   v-if="row.url"
@@ -210,15 +234,112 @@
              @current-change="handleWebsiteNewsPageChange"
            />
          </div>
-       </div>
-     </el-dialog>
-   </div>
- </template>
+        </div>
+      </el-dialog>
+
+      <!-- 高级导出对话框 -->
+      <el-dialog
+        v-model="exportDialog.visible"
+        title="高级导出设置"
+        width="500px"
+        :close-on-click-modal="false"
+      >
+        <el-form
+          :model="exportDialog.formData"
+          label-width="100px"
+          :disabled="exportDialog.loading"
+        >
+          <el-form-item label="导出格式">
+            <el-radio-group v-model="exportDialog.formData.exportFormat">
+              <el-radio label="pdf">PDF</el-radio>
+              <el-radio label="json">JSON</el-radio>
+            </el-radio-group>
+          </el-form-item>
+          
+          <el-form-item label="导出范围">
+            <el-checkbox v-model="exportDialog.formData.onlyRelevant">
+              只导出相关新闻（IS_RELEVANT状态）
+            </el-checkbox>
+          </el-form-item>
+          
+          <el-form-item label="开始时间">
+            <el-date-picker
+              v-model="exportDialog.formData.startTime"
+              type="datetime"
+              placeholder="选择开始时间"
+              value-format="YYYY-MM-DD HH:mm:ss"
+              style="width: 100%"
+            />
+          </el-form-item>
+          
+          <el-form-item label="结束时间">
+            <el-date-picker
+              v-model="exportDialog.formData.endTime"
+              type="datetime"
+              placeholder="选择结束时间"
+              value-format="YYYY-MM-DD HH:mm:ss"
+              style="width: 100%"
+            />
+          </el-form-item>
+          
+          <el-form-item label="状态筛选">
+            <el-select
+              v-model="exportDialog.formData.status"
+              placeholder="选择状态"
+              clearable
+              style="width: 100%"
+            >
+              <el-option label="全部" value="" />
+              <el-option label="爬取成功" value="SPIDER_SUCCESS" />
+              <el-option label="具备相关性" value="IS_RELEVANT" />
+              <el-option label="不相关" value="IS_NOT_RELEVANT" />
+              <el-option label="AI处理失败" value="AI_DEAL_FAIL" />
+            </el-select>
+          </el-form-item>
+          
+          <el-form-item label="关键词搜索">
+            <el-input
+              v-model="exportDialog.formData.keyword"
+              placeholder="输入标题、内容或摘要关键词"
+              clearable
+            />
+          </el-form-item>
+          
+          <el-form-item label="来源类型">
+            <el-select
+              v-model="exportDialog.formData.sourceType"
+              placeholder="选择来源类型"
+              clearable
+              style="width: 100%"
+            >
+              <el-option label="全部" value="" />
+              <el-option label="RSS订阅" value="RSS" />
+              <el-option label="新闻链接" value="NEWS" />
+            </el-select>
+          </el-form-item>
+        </el-form>
+        
+        <template #footer>
+          <span class="dialog-footer">
+            <el-button @click="exportDialog.visible = false">取消</el-button>
+            <el-button 
+              type="primary" 
+              @click="handleExportSubmit"
+              :loading="exportDialog.loading"
+            >
+              开始导出
+            </el-button>
+          </span>
+        </template>
+      </el-dialog>
+    </div>
+  </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { taskLogApi } from '@/api';
+import { ArrowDown } from '@element-plus/icons-vue';
+import { taskLogApi, newsExportApi } from '@/api';
 
 const searchParams = reactive({
   taskType: '',
@@ -452,6 +573,133 @@ const truncateText = (text, maxLength) => {
   
   if (cleanText.length <= maxLength) return cleanText;
   return cleanText.substring(0, maxLength) + '...';
+};
+
+// 任务导出方法
+const handleTaskExport = async (task, command) => {
+  try {
+    // 构建导出参数 - 按任务ID导出
+    const exportParams = {
+      exportFormat: command,
+      taskId: task.id, // 关键：按任务ID导出
+      onlyRelevant: true // 只导出相关新闻
+    };
+    
+    ElMessage.info(`正在导出任务【${task.taskType || '未知任务'}】的相关新闻，请稍候...`);
+    
+    const response = await newsExportApi.exportNews(exportParams);
+    
+    // 处理文件下载
+    const blob = new Blob([response], {
+      type: command === 'pdf' ? 'application/pdf' : 'application/json'
+    });
+    
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    
+    // 生成文件名：任务类型_任务ID_时间戳
+    const timestamp = new Date().getTime();
+    const taskType = task.taskType ? task.taskType.replace(/\s+/g, '_') : 'task';
+    const fileName = `${taskType}_${task.id}_${timestamp}.${command}`;
+    
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    
+    ElMessage.success('导出成功，文件已开始下载');
+  } catch (error) {
+    console.error('任务导出失败:', error);
+    
+    // 尝试从错误响应中获取错误信息
+    let errorMessage = '导出失败';
+    if (error.response && error.response.data) {
+      try {
+        // 对于blob响应，需要先读取
+        if (error.response.data instanceof Blob) {
+          const errorText = await error.response.data.text();
+          try {
+            const errorObj = JSON.parse(errorText);
+            errorMessage = errorObj.message || errorObj.msg || errorMessage;
+          } catch (e) {
+            errorMessage = errorText || errorMessage;
+          }
+        } else if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        }
+      } catch (e) {
+        console.error('解析错误信息失败:', e);
+      }
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    ElMessage.error(`导出失败: ${errorMessage}`);
+  }
+};
+
+// 高级导出对话框
+const exportDialog = reactive({
+  visible: false,
+  loading: false,
+  formData: {
+    exportFormat: 'pdf',
+    onlyRelevant: true,
+    startTime: '',
+    endTime: '',
+    status: '',
+    keyword: '',
+    sourceType: ''
+  }
+});
+
+const handleAdvancedExport = () => {
+  // 初始化表单数据
+  exportDialog.formData.startTime = searchParams.startDate || '';
+  exportDialog.formData.endTime = searchParams.endDate || '';
+  exportDialog.visible = true;
+};
+
+const handleExportSubmit = async () => {
+  try {
+    exportDialog.loading = true;
+    
+    // 构建导出参数
+    const exportParams = {
+      ...exportDialog.formData,
+      startTime: exportDialog.formData.startTime || null,
+      endTime: exportDialog.formData.endTime || null
+    };
+    
+    ElMessage.info('正在生成导出文件，请稍候...');
+    
+    const response = await newsExportApi.exportNews(exportParams);
+    
+    // 处理文件下载（同上）
+    const blob = new Blob([response], {
+      type: exportDialog.formData.exportFormat === 'pdf' ? 'application/pdf' : 'application/json'
+    });
+    
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `news_export_${new Date().getTime()}.${exportDialog.formData.exportFormat}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    
+    exportDialog.visible = false;
+    ElMessage.success('导出成功，文件已开始下载');
+    
+  } catch (error) {
+    console.error('高级导出失败:', error);
+    ElMessage.error('导出失败: ' + (error.message || '未知错误'));
+  } finally {
+    exportDialog.loading = false;
+  }
 };
 
 const formatDate = (dateString) => {

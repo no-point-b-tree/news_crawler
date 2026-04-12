@@ -144,6 +144,8 @@ public class TaskLogManagerServiceImpl extends ServiceImpl<TaskLogMapper, TaskLo
             WebsiteNewsVO vo = new WebsiteNewsVO();
             vo.setId(news.getId());
             vo.setTitle(news.getTitle());
+            vo.setZhTitle(news.getZhTitle()); // 添加中文标题
+            vo.setSummary(news.getSummary()); // 添加摘要
             
             // 优先使用tikaContent（紧凑型文本），如果为空则使用原始content
             if (news.getTikaContent() != null && !news.getTikaContent().trim().isEmpty()) {
@@ -156,6 +158,7 @@ public class TaskLogManagerServiceImpl extends ServiceImpl<TaskLogMapper, TaskLo
             vo.setPublishTime(news.getPublishTime());
             vo.setCreateTime(news.getCreateTime());
             vo.setSourceUrl(news.getSourceUrl());
+            vo.setSource(news.getSource()); // 添加来源字段
             vo.setStatus(news.getStatus());
             vo.setUrl(news.getUrl());
             return vo;
