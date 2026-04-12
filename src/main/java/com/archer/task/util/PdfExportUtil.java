@@ -143,10 +143,11 @@ public class PdfExportUtil {
      * 添加单个新闻项
      */
     private static void addNewsItem(Document document, NewsExportVO news, int index) throws DocumentException {
-        // 新闻序号和标题
-        Paragraph itemTitle = new Paragraph();
-        itemTitle.add(new Chunk(String.format("%d. ", index), HEADER_FONT));
+        // 新闻标题区域
+        Paragraph titleSection = new Paragraph();
+        titleSection.add(new Chunk(String.format("%d. ", index), HEADER_FONT));
         
+        // 标题（优先显示中文标题）
         String displayTitle = "无标题";
         if (news.getZhTitle() != null && !news.getZhTitle().isEmpty()) {
             displayTitle = news.getZhTitle();
@@ -154,56 +155,72 @@ public class PdfExportUtil {
             displayTitle = news.getTitle();
         }
         
-        if (displayTitle.length() > 100) {
-            displayTitle = displayTitle.substring(0, 100) + "...";
+        // 标题过长时截断
+        if (displayTitle.length() > 120) {
+            displayTitle = displayTitle.substring(0, 120) + "...";
         }
-        itemTitle.add(new Chunk(displayTitle, HEADER_FONT));
-        itemTitle.setSpacingAfter(5);
-        document.add(itemTitle);
+        titleSection.add(new Chunk(displayTitle, HEADER_FONT));
+        titleSection.setSpacingAfter(8);
+        document.add(titleSection);
         
-        // 创建详细信息表格
-        PdfPTable table = new PdfPTable(2);
-        table.setWidthPercentage(100);
-        table.setSpacingBefore(5);
-        table.setSpacingAfter(15);
+        // 创建基本信息表格（4列：标签、值、标签、值）
+        PdfPTable infoTable = new PdfPTable(4);
+        infoTable.setWidthPercentage(100);
+        infoTable.setSpacingBefore(5);
+        infoTable.setSpacingAfter(10);
         
-        float[] columnWidths = {3f, 7f};
-        table.setWidths(columnWidths);
+        // 设置列宽比例：标签1、值1、标签2、值2
+        float[] columnWidths = {2f, 3f, 2f, 3f};
+        infoTable.setWidths(columnWidths);
         
-        // 添加新闻信息
-        addInfoRow(table, "发布时间:", formatDate(news.getPublishTime()));
-        addInfoRow(table, "来源类型:", news.getDisplaySourceType());
-        addInfoRow(table, "完整链接:", news.getUrl() != null ? news.getUrl() : "无");
+        // 第一行：发布时间和来源
+        addCompactInfoRow(infoTable, "发布时间:", formatDate(news.getPublishTime()));
+        addCompactInfoRow(infoTable, "来源:", news.getSourceDisplay());
         
-        // 摘要（可能跨行）
-        String summary = news.getSummary();
-        PdfPCell summaryLabelCell = new PdfPCell(new Phrase("摘要:", NORMAL_FONT));
-        summaryLabelCell.setBorder(Rectangle.NO_BORDER);
-        summaryLabelCell.setHorizontalAlignment(Element.ALIGN_LEFT);
-        summaryLabelCell.setVerticalAlignment(Element.ALIGN_TOP);
+        // 第二行：链接类型和状态
+        addCompactInfoRow(infoTable, "链接类型:", news.getDisplaySourceType());
+        addCompactInfoRow(infoTable, "状态:", news.getStatusText());
         
-        String summaryText = "无";
-        if (summary != null && !summary.isEmpty()) {
-            if (summary.length() > 200) {
-                summaryText = summary.substring(0, 200) + "...";
-            } else {
-                summaryText = summary;
+        document.add(infoTable);
+        
+        // 摘要区域
+        Paragraph summaryLabel = new Paragraph("摘要:", NORMAL_FONT);
+        summaryLabel.setSpacingBefore(5);
+        document.add(summaryLabel);
+        
+        String summaryText = "无摘要内容";
+        if (news.getSummary() != null && !news.getSummary().isEmpty()) {
+            summaryText = news.getSummary();
+            if (summaryText.length() > 300) {
+                summaryText = summaryText.substring(0, 300) + "...";
             }
         }
-        PdfPCell summaryValueCell = new PdfPCell(new Phrase(summaryText, NORMAL_FONT));
-        summaryValueCell.setBorder(Rectangle.NO_BORDER);
-        summaryValueCell.setHorizontalAlignment(Element.ALIGN_LEFT);
         
-        table.addCell(summaryLabelCell);
-        table.addCell(summaryValueCell);
+        Paragraph summaryContent = new Paragraph(summaryText, NORMAL_FONT);
+        summaryContent.setSpacingAfter(8);
+        summaryContent.setIndentationLeft(10);
+        document.add(summaryContent);
         
-        document.add(table);
+        // 完整链接区域
+        Paragraph linkLabel = new Paragraph("完整链接:", NORMAL_FONT);
+        document.add(linkLabel);
+        
+        String urlText = news.getUrl() != null ? news.getUrl() : "无链接";
+        if (urlText.length() > 100) {
+            urlText = urlText.substring(0, 100) + "...";
+        }
+        
+        Paragraph linkContent = new Paragraph(urlText, SMALL_FONT);
+        linkContent.setSpacingAfter(15);
+        linkContent.setIndentationLeft(10);
+        linkContent.setFont(new Font(Font.FontFamily.HELVETICA, 9, Font.NORMAL, BaseColor.BLUE));
+        document.add(linkContent);
         
         // 添加分隔线
         Paragraph separator = new Paragraph();
         separator.add(new Chunk("________________________________________________________________________"));
         separator.setSpacingBefore(5);
-        separator.setSpacingAfter(10);
+        separator.setSpacingAfter(15);
         document.add(separator);
     }
     
@@ -255,6 +272,24 @@ public class PdfExportUtil {
         PdfPCell valueCell = new PdfPCell(new Phrase(value, NORMAL_FONT));
         valueCell.setBorder(Rectangle.NO_BORDER);
         valueCell.setHorizontalAlignment(Element.ALIGN_LEFT);
+        
+        table.addCell(labelCell);
+        table.addCell(valueCell);
+    }
+    
+    /**
+     * 添加紧凑信息行（用于4列表格）
+     */
+    private static void addCompactInfoRow(PdfPTable table, String label, String value) {
+        PdfPCell labelCell = new PdfPCell(new Phrase(label, NORMAL_FONT));
+        labelCell.setBorder(Rectangle.NO_BORDER);
+        labelCell.setHorizontalAlignment(Element.ALIGN_LEFT);
+        labelCell.setPadding(2);
+        
+        PdfPCell valueCell = new PdfPCell(new Phrase(value, NORMAL_FONT));
+        valueCell.setBorder(Rectangle.NO_BORDER);
+        valueCell.setHorizontalAlignment(Element.ALIGN_LEFT);
+        valueCell.setPadding(2);
         
         table.addCell(labelCell);
         table.addCell(valueCell);

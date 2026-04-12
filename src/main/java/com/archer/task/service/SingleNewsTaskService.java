@@ -4,6 +4,7 @@ import com.archer.task.ai.AiTaskComponent;
 import com.archer.task.constant.NewsStatusEnum;
 import com.archer.task.entity.*;
 import com.archer.task.mapper.NewsMapper;
+import com.archer.task.mapper.TaskUrlLogMapper;
 import com.archer.task.service.impl.LatestSpiderTaskServiceImpl;
 import com.archer.task.util.TikaUtil;
 import com.archer.task.util.UrlUtils;
@@ -39,8 +40,10 @@ public class SingleNewsTaskService implements Runnable {
     private final Date endDate;
 
     private final AiTaskComponent aiTaskComponent;
+    
+    private final TaskUrlLogMapper taskUrlLogMapper;
 
-    public SingleNewsTaskService(NewsLink newsLink, LatestSpiderTaskServiceImpl latestSpiderTaskService, List<CssSelectorLinkRelation> cssSelectorLinkRelationList, NewsMapper newsMapper, Long taskId, CountDownLatch countDownLatch, Date startDate, Date endDate, AiTaskComponent aiTaskComponent) {
+    public SingleNewsTaskService(NewsLink newsLink, LatestSpiderTaskServiceImpl latestSpiderTaskService, List<CssSelectorLinkRelation> cssSelectorLinkRelationList, NewsMapper newsMapper, Long taskId, CountDownLatch countDownLatch, Date startDate, Date endDate, AiTaskComponent aiTaskComponent, TaskUrlLogMapper taskUrlLogMapper) {
         this.newsLink = newsLink;
         this.latestSpiderTaskService = latestSpiderTaskService;
         this.newsMapper = newsMapper;
@@ -50,20 +53,28 @@ public class SingleNewsTaskService implements Runnable {
         this.startDate = startDate;
         this.endDate = endDate;
         this.aiTaskComponent = aiTaskComponent;
-
+        this.taskUrlLogMapper = taskUrlLogMapper;
     }
 
     @Override
     public void run() {
+        TaskUrlLog taskUrlLog = null;
         try {
+            // 创建URL处理日志记录
+            taskUrlLog = createTaskUrlLog(newsLink.getUrl(), taskId);
+            
             if (newsMapper.getCountByUrl(newsLink.getUrl()) > 0) {
+                // 如果URL已经有新闻，记录为成功但新闻数量为0
+                updateTaskUrlLog(taskUrlLog, 0, "SUCCESS", "URL已有新闻记录");
                 return;
             }
+            
             String lang = newsLink.getLang();
             Locale locale = new Locale(lang);
             Article newsPageContent = latestSpiderTaskService.getArticleContent(newsLink.getUrl());
             List<Hyperlink> hyperLinks = JsoupExtractor.extractor(newsPageContent.getContent(), cssSelectorLinkRelationList, locale);
             List<News> newsList = new ArrayList<>();
+            
             for (Hyperlink hyperLink : hyperLinks) {
                 if (isValidDate(startDate, endDate, hyperLink.getDate())) {
                     if (hyperLink.getHref().startsWith("/")) {
@@ -77,9 +88,21 @@ public class SingleNewsTaskService implements Runnable {
                     newsList.add(news);
                 }
             }
-            aiTaskComponent.startAiTask(newsList, taskId);
+            
+            // 更新URL处理日志
+            if (newsList.isEmpty()) {
+                updateTaskUrlLog(taskUrlLog, 0, "NO_NEWS", "未找到符合条件的新闻");
+            } else {
+                updateTaskUrlLog(taskUrlLog, newsList.size(), "SUCCESS", null);
+                aiTaskComponent.startAiTask(newsList, taskId);
+            }
+            
         } catch (Exception e) {
             log.error("新闻任务异常", e);
+            // 记录错误信息
+            if (taskUrlLog != null) {
+                updateTaskUrlLog(taskUrlLog, 0, "ERROR", e.getMessage());
+            }
         } finally {
             countDownLatch.countDown();
             latestSpiderTaskService.release();
@@ -98,6 +121,43 @@ public class SingleNewsTaskService implements Runnable {
             publishDate = new Date();
         }
         return publishDate.compareTo(startDate) >= 0 && publishDate.compareTo(endDate) <= 0;
+    }
+    
+    /**
+     * 创建任务URL处理日志
+     */
+    private TaskUrlLog createTaskUrlLog(String url, Long taskId) {
+        TaskUrlLog taskUrlLog = new TaskUrlLog();
+        taskUrlLog.setTaskId(taskId);
+        taskUrlLog.setUrl(url);
+        taskUrlLog.setNewsCount(0);
+        taskUrlLog.setStatus("PROCESSING");
+        taskUrlLog.setIsDelete("N");
+        taskUrlLog.setCreateTime(new Date());
+        taskUrlLog.setUpdateTime(new Date());
+        
+        try {
+            taskUrlLogMapper.insert(taskUrlLog);
+        } catch (Exception e) {
+            log.error("创建任务URL处理日志失败", e);
+        }
+        
+        return taskUrlLog;
+    }
+    
+    /**
+     * 更新任务URL处理日志
+     */
+    private void updateTaskUrlLog(TaskUrlLog taskUrlLog, int newsCount, String status, String errorMessage) {
+        try {
+            taskUrlLog.setNewsCount(newsCount);
+            taskUrlLog.setStatus(status);
+            taskUrlLog.setErrorMessage(errorMessage);
+            taskUrlLog.setUpdateTime(new Date());
+            taskUrlLogMapper.updateById(taskUrlLog);
+        } catch (Exception e) {
+            log.error("更新任务URL处理日志失败", e);
+        }
     }
 
     private News getNews(Article article) {

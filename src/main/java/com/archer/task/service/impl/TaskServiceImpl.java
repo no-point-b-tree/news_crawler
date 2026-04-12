@@ -42,6 +42,9 @@ public class TaskServiceImpl implements TaskService {
 
     @Resource
     private AiTaskComponent aiTaskComponent;
+    
+    @Resource
+    private TaskUrlLogMapper taskUrlLogMapper;
 
 
     private final ThreadPoolExecutor threadPool = new ThreadPoolExecutor(6, 8, 60, TimeUnit.SECONDS, queue, new BasicThreadFactory.Builder().namingPattern("spider-%d").build());
@@ -76,7 +79,7 @@ public class TaskServiceImpl implements TaskService {
             }
             for (NewsLink newsLink : newsLinks) {
                 List<CssSelectorLinkRelation> cssSelectors = cssSelectorLinkRelationService.findByUrl(newsLink.getUrl());
-                SingleNewsTaskService task = new SingleNewsTaskService(newsLink, LatestSpiderTaskServiceImpl.getInstance(), cssSelectors, newsMapper, taskLog.getId(), countDownLatch, startDate, current, aiTaskComponent);
+                SingleNewsTaskService task = new SingleNewsTaskService(newsLink, LatestSpiderTaskServiceImpl.getInstance(), cssSelectors, newsMapper, taskLog.getId(), countDownLatch, startDate, current, aiTaskComponent, taskUrlLogMapper);
                 threadPool.execute(task);
             }
             countDownLatch.await();

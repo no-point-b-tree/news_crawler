@@ -88,12 +88,13 @@
                         <el-button type="success" size="small">
                           导出<el-icon class="el-icon--right"><arrow-down /></el-icon>
                         </el-button>
-                        <template #dropdown>
-                          <el-dropdown-menu>
-                            <el-dropdown-item command="pdf">导出为PDF</el-dropdown-item>
-                            <el-dropdown-item command="json">导出为JSON</el-dropdown-item>
-                          </el-dropdown-menu>
-                        </template>
+                         <template #dropdown>
+                           <el-dropdown-menu>
+                             <el-dropdown-item command="word">导出为Word</el-dropdown-item>
+                             <el-dropdown-item command="pdf">导出为PDF</el-dropdown-item>
+                             <el-dropdown-item command="json">导出为JSON</el-dropdown-item>
+                           </el-dropdown-menu>
+                         </template>
                       </el-dropdown>
                       <el-button type="danger" size="small" @click="handleDelete(row)">删除</el-button>
                     </div>
@@ -249,12 +250,13 @@
           label-width="100px"
           :disabled="exportDialog.loading"
         >
-          <el-form-item label="导出格式">
-            <el-radio-group v-model="exportDialog.formData.exportFormat">
-              <el-radio label="pdf">PDF</el-radio>
-              <el-radio label="json">JSON</el-radio>
-            </el-radio-group>
-          </el-form-item>
+           <el-form-item label="导出格式">
+             <el-radio-group v-model="exportDialog.formData.exportFormat">
+               <el-radio label="word">Word</el-radio>
+               <el-radio label="pdf">PDF</el-radio>
+               <el-radio label="json">JSON</el-radio>
+             </el-radio-group>
+           </el-form-item>
           
           <el-form-item label="导出范围">
             <el-checkbox v-model="exportDialog.formData.onlyRelevant">
@@ -590,8 +592,18 @@ const handleTaskExport = async (task, command) => {
     const response = await newsExportApi.exportNews(exportParams);
     
     // 处理文件下载
+    let mimeType = 'application/json';
+    let fileExtension = command;
+    
+    if (command === 'pdf') {
+      mimeType = 'application/pdf';
+    } else if (command === 'word') {
+      mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      fileExtension = 'docx';
+    }
+    
     const blob = new Blob([response], {
-      type: command === 'pdf' ? 'application/pdf' : 'application/json'
+      type: mimeType
     });
     
     const url = window.URL.createObjectURL(blob);
@@ -601,7 +613,7 @@ const handleTaskExport = async (task, command) => {
     // 生成文件名：任务类型_任务ID_时间戳
     const timestamp = new Date().getTime();
     const taskType = task.taskType ? task.taskType.replace(/\s+/g, '_') : 'task';
-    const fileName = `${taskType}_${task.id}_${timestamp}.${command}`;
+    const fileName = `${taskType}_${task.id}_${timestamp}.${fileExtension}`;
     
     link.download = fileName;
     document.body.appendChild(link);
@@ -645,7 +657,7 @@ const exportDialog = reactive({
   visible: false,
   loading: false,
   formData: {
-    exportFormat: 'pdf',
+    exportFormat: 'word',
     onlyRelevant: true,
     startTime: '',
     endTime: '',
@@ -677,15 +689,25 @@ const handleExportSubmit = async () => {
     
     const response = await newsExportApi.exportNews(exportParams);
     
-    // 处理文件下载（同上）
+    // 处理文件下载
+    let mimeType = 'application/json';
+    let fileExtension = exportDialog.formData.exportFormat;
+    
+    if (exportDialog.formData.exportFormat === 'pdf') {
+      mimeType = 'application/pdf';
+    } else if (exportDialog.formData.exportFormat === 'word') {
+      mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      fileExtension = 'docx';
+    }
+    
     const blob = new Blob([response], {
-      type: exportDialog.formData.exportFormat === 'pdf' ? 'application/pdf' : 'application/json'
+      type: mimeType
     });
     
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `news_export_${new Date().getTime()}.${exportDialog.formData.exportFormat}`;
+    link.download = `news_export_${new Date().getTime()}.${fileExtension}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

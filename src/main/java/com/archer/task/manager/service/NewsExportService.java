@@ -26,6 +26,11 @@ public interface NewsExportService {
     byte[] exportToPdf(NewsExportRequest request);
     
     /**
+     * 导出为Word格式
+     */
+    byte[] exportToWord(NewsExportRequest request);
+    
+    /**
      * 获取导出文件名
      */
     String getExportFileName(NewsExportRequest request);

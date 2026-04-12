@@ -58,6 +58,16 @@ public class NewsExportController {
                         .contentType(MediaType.APPLICATION_PDF)
                         .body(pdfContent);
                         
+            } else if ("word".equalsIgnoreCase(request.getExportFormat()) || "doc".equalsIgnoreCase(request.getExportFormat())) {
+                // 导出为Word
+                byte[] wordContent = newsExportService.exportToWord(request);
+                
+                return ResponseEntity.ok()
+                        .header(HttpHeaders.CONTENT_DISPOSITION, 
+                                String.format("attachment; filename=\"%s.docx\"", fileName))
+                        .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+                        .body(wordContent);
+                        
             } else {
                 return ResponseEntity.badRequest().body("不支持的导出格式: " + request.getExportFormat());
             }

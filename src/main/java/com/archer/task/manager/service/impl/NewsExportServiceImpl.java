@@ -7,6 +7,7 @@ import com.archer.task.manager.service.NewsExportService;
 import com.archer.task.manager.vo.NewsExportVO;
 import com.archer.task.mapper.NewsMapper;
 import com.archer.task.util.PdfExportUtil;
+import com.archer.task.util.WordExportUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -123,6 +124,19 @@ public class NewsExportServiceImpl implements NewsExportService {
         } catch (Exception e) {
             log.error("PDF导出失败", e);
             throw new RuntimeException("PDF导出失败", e);
+        }
+    }
+    
+    @Override
+    public byte[] exportToWord(NewsExportRequest request) {
+        List<NewsExportVO> data = getExportData(request);
+        
+        try {
+            // 使用Word工具类生成Word文档
+            return WordExportUtil.generateNewsWord(data, getExportFileName(request));
+        } catch (Exception e) {
+            log.error("Word导出失败", e);
+            throw new RuntimeException("Word导出失败", e);
         }
     }
     

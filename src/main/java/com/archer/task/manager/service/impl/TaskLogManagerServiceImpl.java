@@ -1,14 +1,16 @@
 package com.archer.task.manager.service.impl;
 
-import com.archer.task.entity.TaskLog;
 import com.archer.task.entity.News;
 import com.archer.task.entity.NewsLink;
+import com.archer.task.entity.TaskLog;
+import com.archer.task.entity.TaskUrlLog;
 import com.archer.task.manager.service.TaskLogManagerService;
 import com.archer.task.manager.vo.TaskDetailVO;
 import com.archer.task.manager.vo.WebsiteNewsVO;
-import com.archer.task.mapper.TaskLogMapper;
-import com.archer.task.mapper.NewsMapper;
 import com.archer.task.mapper.NewsLinkMapper;
+import com.archer.task.mapper.NewsMapper;
+import com.archer.task.mapper.TaskLogMapper;
+import com.archer.task.mapper.TaskUrlLogMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -32,6 +34,7 @@ public class TaskLogManagerServiceImpl extends ServiceImpl<TaskLogMapper, TaskLo
     private final TaskLogMapper taskLogMapper;
     private final NewsMapper newsMapper;
     private final NewsLinkMapper newsLinkMapper;
+    private final TaskUrlLogMapper taskUrlLogMapper;
 
     @Override
     public Page<TaskLog> pageTaskLogs(String taskType, String startDate, String endDate, Integer page, Integer size) {
@@ -76,24 +79,27 @@ public class TaskLogManagerServiceImpl extends ServiceImpl<TaskLogMapper, TaskLo
             taskDetailVO.setTaskType(taskLog.getTaskType());
         }
         
-        // 查询该任务下的所有新闻，按source_url分组统计
-        LambdaQueryWrapper<News> newsQueryWrapper = new LambdaQueryWrapper<>();
-        newsQueryWrapper.eq(News::getTaskId, taskId)
-                       .eq(News::getIsDelete, "N")
-                       .isNotNull(News::getSourceUrl);
+        // 查询该任务下的所有URL处理记录
+        LambdaQueryWrapper<TaskUrlLog> taskUrlLogQueryWrapper = new LambdaQueryWrapper<>();
+        taskUrlLogQueryWrapper.eq(TaskUrlLog::getTaskId, taskId)
+                             .eq(TaskUrlLog::getIsDelete, "N");
         
-        List<News> newsList = newsMapper.selectList(newsQueryWrapper);
+        List<TaskUrlLog> taskUrlLogs = taskUrlLogMapper.selectList(taskUrlLogQueryWrapper);
         
-        // 按source_url分组统计
-        Map<String, Long> newsCountBySourceUrl = newsList.stream()
-            .collect(Collectors.groupingBy(News::getSourceUrl, Collectors.counting()));
+        // 按URL统计新闻数量（直接从task_url_log表中获取）
+        Map<String, Integer> newsCountBySourceUrl = taskUrlLogs.stream()
+            .collect(Collectors.toMap(
+                TaskUrlLog::getUrl,
+                TaskUrlLog::getNewsCount,
+                (count1, count2) -> count1 + count2  // 如果有重复URL，合并数量
+            ));
         
         // 构建网站统计信息
         List<TaskDetailVO.WebsiteSummary> websiteSummaries = new ArrayList<>();
         
-        for (Map.Entry<String, Long> entry : newsCountBySourceUrl.entrySet()) {
+        for (Map.Entry<String, Integer> entry : newsCountBySourceUrl.entrySet()) {
             String sourceUrl = entry.getKey();
-            Long newsCount = entry.getValue();
+            Long newsCount = entry.getValue().longValue();
             
             // 查找对应的网站信息
             LambdaQueryWrapper<NewsLink> newsLinkQueryWrapper = new LambdaQueryWrapper<>();

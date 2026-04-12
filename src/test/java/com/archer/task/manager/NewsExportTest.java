@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
@@ -97,8 +98,9 @@ public class NewsExportTest {
         // 设置时间范围（最近7天）
         Date endTime = new Date();
         Date startTime = new Date(endTime.getTime() - 7 * 24 * 60 * 60 * 1000L);
-        request.setStartTime(startTime);
-        request.setEndTime(endTime);
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        request.setStartTime(sdf.format(startTime));
+        request.setEndTime(sdf.format(endTime));
         
         request.setKeyword("安全"); // 搜索包含"安全"的新闻
         request.setSourceType("RSS"); // 只导出RSS来源

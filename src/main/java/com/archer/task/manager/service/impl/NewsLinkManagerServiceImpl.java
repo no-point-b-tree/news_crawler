@@ -10,6 +10,7 @@ import com.archer.task.mapper.CssSelectorLinkRelationMapper;
 import com.archer.task.mapper.NewsLinkMapper;
 import com.archer.task.mapper.NewsMapper;
 import com.archer.task.mapper.TaskLogMapper;
+import com.archer.task.mapper.TaskUrlLogMapper;
 import com.archer.task.service.CssSelectorLinkRelationService;
 import com.archer.task.service.SingleNewsTaskService;
 import com.archer.task.service.TaskService;
@@ -55,6 +56,9 @@ public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, News
 
     @Resource
     private AiTaskComponent aiTaskComponent;
+    
+    @Resource
+    private TaskUrlLogMapper taskUrlLogMapper;
 
     @Override
     public Page<NewsLink> pageNewsLinks(String keyword, List<String> langs, Integer page, Integer size) {
@@ -246,7 +250,7 @@ public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, News
             List<CssSelectorLinkRelation> cssSelectors = cssSelectorLinkRelationService.findByUrl(newsLink.getUrl());
             CountDownLatch aiCl = new CountDownLatch(1);
             aiTaskComponent.setTaskCountDown(taskLog.getId(), aiCl);
-            SingleNewsTaskService singleNewsTaskService = new SingleNewsTaskService(newsLink, LatestSpiderTaskServiceImpl.getInstance(), cssSelectors, newsMapper, taskId, new CountDownLatch(1), startDate, endDate, aiTaskComponent);
+            SingleNewsTaskService singleNewsTaskService = new SingleNewsTaskService(newsLink, LatestSpiderTaskServiceImpl.getInstance(), cssSelectors, newsMapper, taskId, new CountDownLatch(1), startDate, endDate, aiTaskComponent, taskUrlLogMapper);
             new Thread(singleNewsTaskService).start();
             new Thread(() -> {
                 try {
