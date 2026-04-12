@@ -10,7 +10,7 @@ spring:
     # 数据库用户名
     username: root
     # 数据库密码
-    password: root
+    password: Longmap@668
     # 连接池配置 (以HikariCP为例，Spring Boot 2.x默认)
     hikari:
       maximum-pool-size: 10

@@ -1,6 +1,6 @@
 # application.yml
 server:
-  port: 9009
+  port: 9008
 spring:
   datasource:
     # 数据库驱动 (MySQL 8.0 使用 com.mysql.cj.jdbc.Driver)

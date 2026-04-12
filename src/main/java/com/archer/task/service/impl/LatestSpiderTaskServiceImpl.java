@@ -1,13 +1,9 @@
 package com.archer.task.service.impl;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.io.IOException;
+import java.nio.file.Paths;
+import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -38,13 +34,27 @@ public class LatestSpiderTaskServiceImpl implements LatestSpiderTaskService {
 
     private static final ArrayBlockingQueue<LatestSpiderTaskServiceImpl> queue = new ArrayBlockingQueue<>(10);
 
+    static Properties properties;
+
     static {
         for (int i = 0; i < queue.remainingCapacity(); i++) {
             queue.add(new LatestSpiderTaskServiceImpl());
         }
     }
 
-    public static LatestSpiderTaskServiceImpl getInstance() {
+    public static LatestSpiderTaskServiceImpl getInstance(String active) {
+        synchronized (LatestSpiderTaskServiceImpl.class) {
+            if (properties == null) {
+                synchronized (LatestSpiderTaskServiceImpl.class) {
+                    properties = new Properties();
+                    try {
+                        properties.load(LatestSpiderTaskServiceImpl.class.getResourceAsStream(String.format("/playwright/config-%s.properties", active)));
+                    } catch (IOException e) {
+                        log.error("加载配置失败", e);
+                    }
+                }
+            }
+        }
         try {
             return queue.take();
         } catch (InterruptedException e) {
@@ -79,7 +89,13 @@ public class LatestSpiderTaskServiceImpl implements LatestSpiderTaskService {
     @Override
     public Browser getBrowser() {
         BrowserType.LaunchOptions options = new BrowserType.LaunchOptions();
-        options.setExecutablePath(new File("D:/dev/chrome/chrome-win64/chrome.exe").toPath()).setHeadless(false);
+        String executablePath = properties.getProperty("executablePath");
+        if (executablePath != null) {
+            options.setExecutablePath(Paths.get(executablePath));
+        }
+        String headlessStr = properties.getProperty("headless", "false");
+        boolean headless = Boolean.parseBoolean(headlessStr);
+        options.setHeadless(headless);
         return playwright.chromium().launch(options);
     }
 

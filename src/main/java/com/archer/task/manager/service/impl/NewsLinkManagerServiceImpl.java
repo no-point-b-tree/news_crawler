@@ -23,6 +23,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.time.DateUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -56,9 +57,12 @@ public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, News
 
     @Resource
     private AiTaskComponent aiTaskComponent;
-    
+
     @Resource
     private TaskUrlLogMapper taskUrlLogMapper;
+
+    @Value("${spring.profiles.active}")
+    private String active;
 
     @Override
     public Page<NewsLink> pageNewsLinks(String keyword, List<String> langs, Integer page, Integer size) {
@@ -250,7 +254,7 @@ public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, News
             List<CssSelectorLinkRelation> cssSelectors = cssSelectorLinkRelationService.findByUrl(newsLink.getUrl());
             CountDownLatch aiCl = new CountDownLatch(1);
             aiTaskComponent.setTaskCountDown(taskLog.getId(), aiCl);
-            SingleNewsTaskService singleNewsTaskService = new SingleNewsTaskService(newsLink, LatestSpiderTaskServiceImpl.getInstance(), cssSelectors, newsMapper, taskId, new CountDownLatch(1), startDate, endDate, aiTaskComponent, taskUrlLogMapper);
+            SingleNewsTaskService singleNewsTaskService = new SingleNewsTaskService(newsLink, LatestSpiderTaskServiceImpl.getInstance(active), cssSelectors, newsMapper, taskId, new CountDownLatch(1), startDate, endDate, aiTaskComponent, taskUrlLogMapper);
             new Thread(singleNewsTaskService).start();
             new Thread(() -> {
                 try {
