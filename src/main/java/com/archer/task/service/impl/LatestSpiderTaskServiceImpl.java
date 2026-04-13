@@ -36,12 +36,6 @@ public class LatestSpiderTaskServiceImpl implements LatestSpiderTaskService {
 
     static Properties properties;
 
-    static {
-        for (int i = 0; i < queue.remainingCapacity(); i++) {
-            queue.add(new LatestSpiderTaskServiceImpl());
-        }
-    }
-
     public static LatestSpiderTaskServiceImpl getInstance(String active) {
         synchronized (LatestSpiderTaskServiceImpl.class) {
             if (properties == null) {
@@ -49,6 +43,10 @@ public class LatestSpiderTaskServiceImpl implements LatestSpiderTaskService {
                     properties = new Properties();
                     try {
                         properties.load(LatestSpiderTaskServiceImpl.class.getResourceAsStream(String.format("/playwright/config-%s.properties", active)));
+                        int count = Integer.parseInt(properties.getProperty("instanceNum", "1"));
+                        for (int i = 0; i < count; i++) {
+                            queue.add(new LatestSpiderTaskServiceImpl());
+                        }
                     } catch (IOException e) {
                         log.error("加载配置失败", e);
                     }
