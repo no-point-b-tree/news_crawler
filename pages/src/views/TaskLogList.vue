@@ -49,10 +49,21 @@
                 </el-row>
               </el-form>
             </el-card>
-          </el-col>
+           </el-col>
 
-          <el-col :span="24">
-            <el-card>
+           <!-- 操作按钮区域 -->
+           <el-col :span="24">
+             <el-card class="action-card">
+               <div class="action-header">
+                 <div class="action-buttons-left">
+                   <el-button type="primary" @click="handleExecuteAllTasks">执行所有任务</el-button>
+                 </div>
+               </div>
+             </el-card>
+           </el-col>
+
+           <el-col :span="24">
+             <el-card>
               <el-table
                 :data="tableData"
                 v-loading="loading"
@@ -333,6 +344,77 @@
             </el-button>
           </span>
         </template>
+       </el-dialog>
+
+      <!-- 执行所有任务对话框 -->
+      <el-dialog
+        v-model="executeAllTasksDialog.visible"
+        title="执行所有任务"
+        width="500px"
+        :close-on-click-modal="false"
+      >
+        <el-form
+          :model="executeAllTasksDialog.formData"
+          label-width="100px"
+          :disabled="executeAllTasksDialog.loading"
+        >
+          <el-form-item label="开始时间" required>
+            <el-date-picker
+              v-model="executeAllTasksDialog.formData.startDate"
+              type="datetime"
+              placeholder="选择开始时间"
+              value-format="YYYY-MM-DD HH:mm:ss"
+              style="width: 100%"
+            />
+          </el-form-item>
+          
+          <el-form-item label="结束时间" required>
+            <el-date-picker
+              v-model="executeAllTasksDialog.formData.endDate"
+              type="datetime"
+              placeholder="选择结束时间"
+              value-format="YYYY-MM-DD HH:mm:ss"
+              style="width: 100%"
+            />
+          </el-form-item>
+          
+          <el-form-item label="任务类型">
+            <el-select
+              v-model="executeAllTasksDialog.formData.taskType"
+              placeholder="选择任务类型（可选）"
+              clearable
+              style="width: 100%"
+            >
+              <el-option label="全部" value="" />
+              <el-option label="新闻任务" value="NEWS" />
+              <el-option label="RSS任务" value="RSS" />
+            </el-select>
+          </el-form-item>
+          
+          <el-form-item label="并发数量">
+            <el-input-number
+              v-model="executeAllTasksDialog.formData.concurrentCount"
+              :min="1"
+              :max="10"
+              placeholder="并发执行的任务数量"
+              style="width: 100%"
+            />
+            <div class="form-tip">建议值：1-5，根据服务器性能调整</div>
+          </el-form-item>
+        </el-form>
+        
+        <template #footer>
+          <span class="dialog-footer">
+            <el-button @click="executeAllTasksDialog.visible = false">取消</el-button>
+            <el-button
+              type="primary"
+              @click="handleExecuteAllTasksSubmit"
+              :loading="executeAllTasksDialog.loading"
+            >
+              开始执行
+            </el-button>
+          </span>
+        </template>
       </el-dialog>
     </div>
   </template>
@@ -363,6 +445,17 @@ const taskDetailDialog = reactive({
   loading: false,
   taskId: null,
   websiteData: []
+});
+
+const executeAllTasksDialog = reactive({
+  visible: false,
+  loading: false,
+  formData: {
+    startDate: '',
+    endDate: '',
+    taskType: '',
+    concurrentCount: 3
+  }
 });
 
 const websiteNewsDialog = reactive({
@@ -436,6 +529,72 @@ const handleDelete = async (row) => {
     if (error !== 'cancel') {
       ElMessage.error('删除失败');
     }
+  }
+};
+
+// 执行所有任务
+const handleExecuteAllTasks = () => {
+  // 设置默认时间范围：前一天到今天
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  
+  // 格式化日期为yyyy-MM-dd HH:mm:ss格式
+  const formatDateTime = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  };
+  
+  executeAllTasksDialog.formData.startDate = formatDateTime(yesterday);
+  executeAllTasksDialog.formData.endDate = formatDateTime(now);
+  executeAllTasksDialog.formData.taskType = '';
+  executeAllTasksDialog.formData.concurrentCount = 3;
+  
+  executeAllTasksDialog.visible = true;
+  executeAllTasksDialog.loading = false;
+};
+
+// 提交执行所有任务
+const handleExecuteAllTasksSubmit = async () => {
+  // 验证表单
+  if (!executeAllTasksDialog.formData.startDate || !executeAllTasksDialog.formData.endDate) {
+    ElMessage.error('请选择开始时间和结束时间');
+    return;
+  }
+  
+  try {
+    executeAllTasksDialog.loading = true;
+    
+    // 调用后端API执行所有任务
+    const params = {
+      startDate: executeAllTasksDialog.formData.startDate,
+      endDate: executeAllTasksDialog.formData.endDate,
+      taskType: executeAllTasksDialog.formData.taskType || undefined,
+      concurrentCount: executeAllTasksDialog.formData.concurrentCount
+    };
+    
+    // 这里需要调用后端的执行所有任务接口
+    // 假设有一个 startAllTasks 的API方法
+    await taskLogApi.startAllTasks(params);
+    
+    ElMessage.success('已开始执行所有任务，请稍后查看任务日志');
+    executeAllTasksDialog.visible = false;
+    
+    // 延迟刷新数据，给任务一些执行时间
+    setTimeout(() => {
+      fetchData();
+    }, 3000);
+    
+  } catch (error) {
+    console.error('执行所有任务失败:', error);
+    ElMessage.error('执行所有任务失败: ' + (error.message || '未知错误'));
+  } finally {
+    executeAllTasksDialog.loading = false;
   }
 };
 

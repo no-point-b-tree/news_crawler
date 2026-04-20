@@ -34,22 +34,25 @@ public class LatestSpiderTaskServiceImpl implements LatestSpiderTaskService {
 
     private static final ArrayBlockingQueue<LatestSpiderTaskServiceImpl> queue = new ArrayBlockingQueue<>(10);
 
-    static Properties properties;
+    static volatile Properties properties;
 
     public static LatestSpiderTaskServiceImpl getInstance(String active) {
         synchronized (LatestSpiderTaskServiceImpl.class) {
             if (properties == null) {
                 synchronized (LatestSpiderTaskServiceImpl.class) {
-                    properties = new Properties();
-                    try {
-                        properties.load(LatestSpiderTaskServiceImpl.class.getResourceAsStream(String.format("/playwright/config-%s.properties", active)));
-                        int count = Integer.parseInt(properties.getProperty("instanceNum", "1"));
-                        for (int i = 0; i < count; i++) {
-                            queue.add(new LatestSpiderTaskServiceImpl());
+                    if (properties == null) {
+                        properties = new Properties();
+                        try {
+                            properties.load(LatestSpiderTaskServiceImpl.class.getResourceAsStream(String.format("/playwright/config-%s.properties", active)));
+                            int count = Integer.parseInt(properties.getProperty("instanceNum", "1"));
+                            for (int i = 0; i < count; i++) {
+                                queue.add(new LatestSpiderTaskServiceImpl());
+                            }
+                        } catch (IOException e) {
+                            log.error("加载配置失败", e);
                         }
-                    } catch (IOException e) {
-                        log.error("加载配置失败", e);
                     }
+
                 }
             }
         }

@@ -331,7 +331,7 @@
                   />
                 </el-form-item>
               </el-col>
-              <el-col :span="12">
+               <el-col :span="12">
                 <el-form-item label="日期选择器" prop="dateCssSelector">
                   <el-input
                     v-model="cssSelectorDialog.formData.dateCssSelector"
@@ -351,14 +351,20 @@
                   />
                 </el-form-item>
               </el-col>
-              <el-col :span="12">
+               <el-col :span="12">
                 <el-form-item label="日期匹配规则" prop="datePattern">
                   <el-input
                     v-model="cssSelectorDialog.formData.datePattern"
-                    placeholder="请输入日期匹配规则（如：yyyy-MM-dd HH:mm:ss）"
+                    placeholder="请输入日期匹配规则（如：yyyy-MM-dd HH:mm:ss）或粘贴日期示例自动识别"
                     maxlength="500"
                     show-word-limit
+                    @blur="handleDatePatternBlur"
                   />
+                  <div class="date-format-hint" v-if="cssSelectorDialog.showDateFormatHint">
+                    <span class="hint-text">检测到日期格式: {{ cssSelectorDialog.detectedDateFormat }}</span>
+                    <el-button type="text" @click="applyDetectedDateFormat">应用</el-button>
+                    <el-button type="text" @click="cssSelectorDialog.showDateFormatHint = false">忽略</el-button>
+                  </div>
                 </el-form-item>
               </el-col>
               <el-col :span="12">
@@ -457,7 +463,7 @@
         <el-form-item label="日期选择器" prop="dateCssSelector">
           <el-input
             v-model="cssSelectorEditDialog.formData.dateCssSelector"
-            placeholder="请输入日期选择器"
+            placeholder="请输入日期选择器（如：.date）"
             maxlength="500"
             show-word-limit
           />
@@ -473,10 +479,16 @@
         <el-form-item label="日期匹配规则" prop="datePattern">
           <el-input
             v-model="cssSelectorEditDialog.formData.datePattern"
-            placeholder="请输入日期匹配规则（如：yyyy-MM-dd HH:mm:ss）"
+            placeholder="请输入日期匹配规则（如：yyyy-MM-dd HH:mm:ss）或粘贴日期示例自动识别"
             maxlength="500"
             show-word-limit
+            @blur="handleEditDatePatternBlur"
           />
+          <div class="date-format-hint" v-if="cssSelectorEditDialog.showDateFormatHint">
+            <span class="hint-text">检测到日期格式: {{ cssSelectorEditDialog.detectedDateFormat }}</span>
+            <el-button type="text" @click="applyEditDetectedDateFormat">应用</el-button>
+            <el-button type="text" @click="cssSelectorEditDialog.showDateFormatHint = false">忽略</el-button>
+          </div>
         </el-form-item>
         <el-form-item label="启用状态" prop="enabled">
           <el-select
@@ -585,6 +597,8 @@ const cssSelectorDialog = reactive({
     datePattern: '',
     enabled: 'ON'
   },
+  showDateFormatHint: false,
+  detectedDateFormat: '',
   formRules: {
     cssSelectorGroup: [
       { required: true, message: '请输入CSS选择器组', trigger: 'blur' },
@@ -617,7 +631,9 @@ const cssSelectorEditDialog = reactive({
     hyperLinkCssSelector: '',
     datePattern: '',
     enabled: 'ON'
-  }
+  },
+  showDateFormatHint: false,
+  detectedDateFormat: ''
 });
 
 const cssSelectorFormRef = ref();
@@ -1119,18 +1135,19 @@ const handleBatchViewWithCss = () => {
 const handleViewCssSelectors = async (row) => {
   cssSelectorDialog.visible = true;
   cssSelectorDialog.url = row.url;
-  cssSelectorDialog.pagination.current = 1;
+  cssSelectorDialog.title = `CSS选择器 - ${row.name || row.domain}`;
   
   Object.assign(cssSelectorDialog.formData, {
     cssSelectorGroup: '',
     dateCssSelector: '',
     hyperLinkCssSelector: '',
+    datePattern: '',
     enabled: 'ON'
   });
   
-  if (cssSelectorFormRef.value) {
-    cssSelectorFormRef.value.clearValidate();
-  }
+  // 重置日期格式识别状态
+  cssSelectorDialog.showDateFormatHint = false;
+  cssSelectorDialog.detectedDateFormat = '';
   
   fetchCssSelectors();
 };
@@ -1190,6 +1207,234 @@ const handleAddCssSelector = async () => {
   }
 };
 
+// 日期格式识别工具函数
+const detectDateFormat = (dateStr) => {
+  if (!dateStr || typeof dateStr !== 'string') {
+    return null;
+  }
+  
+  // 移除多余空格，标准化输入
+  dateStr = dateStr.trim().replace(/\s+/g, ' '); // 将多个空格替换为单个空格
+  
+  // 常见日期格式模式匹配 - 按优先级排序（从最具体到最通用）
+  const patterns = [
+    // 1. 带时间的英文格式 (April 13, 2026 2:30 PM)
+    { regex: /^(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),\s+(\d{4})\s+(\d{1,2}):(\d{2})\s+(AM|PM)$/i, format: 'MMMM dd, yyyy h:mm a' },
+    
+    // 2. 英文月份全称 + 日期 + 年份 (April 13, 2026) - 更灵活的正则
+    { regex: /^(January|February|March|April|May|June|July|August|September|October|November|December)[\s,]+(\d{1,2})[\s,]*(\d{4})$/i, format: 'MMMM dd, yyyy' },
+    
+    // 3. 英文月份缩写 + 日期 + 年份 (Apr 13, 2026) - 更灵活的正则
+    { regex: /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[\s,\.]+(\d{1,2})[\s,\.]*(\d{4})$/i, format: 'MMM dd, yyyy' },
+    
+    // 4. 英文日期格式变体 (13 April 2026)
+    { regex: /^(\d{1,2})[\s\-]+(January|February|March|April|May|June|July|August|September|October|November|December)[\s\-]+(\d{4})$/i, format: 'dd MMMM yyyy' },
+    
+    // 5. 英文缩写日期格式变体 (13 Apr 2026)
+    { regex: /^(\d{1,2})[\s\-]+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[\s\-\.]+(\d{4})$/i, format: 'dd MMM yyyy' },
+    
+    // 6. 中文日期格式带完整时间 (2026年4月13日 14:30:45)
+    { regex: /^(\d{4})年(\d{1,2})月(\d{1,2})日\s+(\d{1,2}):(\d{2}):(\d{2})$/, format: 'yyyy年MM月dd日 HH:mm:ss' },
+    
+    // 7. 中文日期格式带时间 (2026年4月13日 14:30)
+    { regex: /^(\d{4})年(\d{1,2})月(\d{1,2})日\s+(\d{1,2}):(\d{2})$/, format: 'yyyy年MM月dd日 HH:mm' },
+    
+    // 8. 中文日期格式 (2026年4月13日)
+    { regex: /^(\d{4})年(\d{1,2})月(\d{1,2})日$/, format: 'yyyy年MM月dd日' },
+    
+    // 9. ISO格式带完整时间 (2026-04-13 14:30:45)
+    { regex: /^(\d{4})[\-\/](\d{1,2})[\-\/](\d{1,2})\s+(\d{1,2}):(\d{2}):(\d{2})$/, format: 'yyyy-MM-dd HH:mm:ss' },
+    
+    // 10. ISO格式带时间 (2026-04-13 14:30)
+    { regex: /^(\d{4})[\-\/](\d{1,2})[\-\/](\d{1,2})\s+(\d{1,2}):(\d{2})$/, format: 'yyyy-MM-dd HH:mm' },
+    
+    // 11. ISO格式 (2026-04-13, 2026/04/13)
+    { regex: /^(\d{4})[\-\/](\d{1,2})[\-\/](\d{1,2})$/, format: 'yyyy-MM-dd' },
+    
+    // 12. 美国格式带时间 (04/13/2026 14:30)
+    { regex: /^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})\s+(\d{1,2}):(\d{2})$/, format: 'MM/dd/yyyy HH:mm' },
+    
+    // 13. 美国格式 (04/13/2026, 04-13-2026, 04.13.2026)
+    { regex: /^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/, format: 'MM/dd/yyyy' },
+    
+    // 14. 欧洲格式带时间 (13.04.2026 14:30)
+    { regex: /^(\d{1,2})[\.\/\-](\d{1,2})[\.\/\-](\d{4})\s+(\d{1,2}):(\d{2})$/, format: 'dd.MM.yyyy HH:mm' },
+    
+    // 15. 欧洲格式 (13.04.2026, 13/04/2026, 13-04-2026)
+    { regex: /^(\d{1,2})[\.\/\-](\d{1,2})[\.\/\-](\d{4})$/, format: 'dd.MM.yyyy' },
+    
+    // 16. 简写英文月份带年份 (Apr 13 2026)
+    { regex: /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[\s\.]+(\d{1,2})[\s\.]+(\d{4})$/i, format: 'MMM dd yyyy' },
+    
+    // 17. 简写英文月份 (Apr 13)
+    { regex: /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[\s\.]+(\d{1,2})$/i, format: 'MMM dd' },
+    
+    // 18. 全称英文月份带年份 (April 13 2026)
+    { regex: /^(January|February|March|April|May|June|July|August|September|October|November|December)[\s\.]+(\d{1,2})[\s\.]+(\d{4})$/i, format: 'MMMM dd yyyy' },
+    
+    // 19. 全称英文月份 (April 13)
+    { regex: /^(January|February|March|April|May|June|July|August|September|October|November|December)[\s\.]+(\d{1,2})$/i, format: 'MMMM dd' },
+    
+    // 20. 年月格式 (2026年4月)
+    { regex: /^(\d{4})年(\d{1,2})月$/, format: 'yyyy年MM月' },
+    
+    // 21. 年月格式 (April 2026)
+    { regex: /^(January|February|March|April|May|June|July|August|September|October|November|December)[\s\.]+(\d{4})$/i, format: 'MMMM yyyy' },
+    
+    // 22. 年月格式 (Apr 2026)
+    { regex: /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[\s\.]+(\d{4})$/i, format: 'MMM yyyy' },
+    
+    // 23. 只有年份 (2026)
+    { regex: /^(\d{4})$/, format: 'yyyy' },
+    
+    // 24. RFC 822/1123格式 (Mon, 13 Apr 2026 14:30:45 GMT)
+    { regex: /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun),\s+(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})\s+(\d{2}):(\d{2}):(\d{2})\s+GMT$/i, format: 'EEE, dd MMM yyyy HH:mm:ss \'GMT\'' },
+    
+    // 25. 时间戳 (毫秒) - 13位数字
+    { regex: /^\d{13}$/, format: 'timestamp' },
+    
+    // 26. Unix时间戳 (秒) - 10位数字
+    { regex: /^\d{10}$/, format: 'unix' },
+  ];
+  
+  // 调试日志
+  console.log('检测日期格式，输入:', dateStr);
+  
+  for (const pattern of patterns) {
+    if (pattern.regex.test(dateStr)) {
+      console.log('匹配到格式:', pattern.format, '正则:', pattern.regex);
+      return pattern.format;
+    }
+  }
+  
+  console.log('未匹配到任何日期格式');
+  return null;
+};
+
+// 处理日期匹配规则失去焦点事件（添加对话框）
+const handleDatePatternBlur = () => {
+  const dateStr = cssSelectorDialog.formData.datePattern;
+  
+  // 如果输入为空，不进行处理
+  if (!dateStr || !dateStr.trim()) {
+    cssSelectorDialog.showDateFormatHint = false;
+    return;
+  }
+  
+  // 检查是否已经是Java日期格式（包含yyyy、MM、dd、HH、mm、ss等关键字）
+  const isJavaDateFormat = /yyyy|MM|dd|HH|mm|ss|a|EEE|MMMM|MMM/.test(dateStr);
+  if (isJavaDateFormat) {
+    // 如果已经是Java日期格式，不进行自动识别
+    cssSelectorDialog.showDateFormatHint = false;
+    return;
+  }
+  
+  const detectedFormat = detectDateFormat(dateStr);
+  
+  if (detectedFormat) {
+    cssSelectorDialog.detectedDateFormat = detectedFormat;
+    cssSelectorDialog.showDateFormatHint = true;
+    console.log('检测到日期格式:', detectedFormat, '输入:', dateStr);
+  } else {
+    cssSelectorDialog.showDateFormatHint = false;
+    console.log('未检测到日期格式，输入:', dateStr);
+  }
+};
+
+// 应用检测到的日期格式（添加对话框）
+const applyDetectedDateFormat = () => {
+  if (cssSelectorDialog.detectedDateFormat) {
+    cssSelectorDialog.formData.datePattern = cssSelectorDialog.detectedDateFormat;
+    cssSelectorDialog.showDateFormatHint = false;
+    ElMessage.success('已应用检测到的日期格式');
+  }
+};
+
+// 处理编辑对话框日期匹配规则失去焦点事件
+const handleEditDatePatternBlur = () => {
+  const dateStr = cssSelectorEditDialog.formData.datePattern;
+  
+  // 如果输入为空，不进行处理
+  if (!dateStr || !dateStr.trim()) {
+    cssSelectorEditDialog.showDateFormatHint = false;
+    return;
+  }
+  
+  // 检查是否已经是Java日期格式（包含yyyy、MM、dd、HH、mm、ss等关键字）
+  const isJavaDateFormat = /yyyy|MM|dd|HH|mm|ss|a|EEE|MMMM|MMM/.test(dateStr);
+  if (isJavaDateFormat) {
+    // 如果已经是Java日期格式，不进行自动识别
+    cssSelectorEditDialog.showDateFormatHint = false;
+    return;
+  }
+  
+  const detectedFormat = detectDateFormat(dateStr);
+  
+  if (detectedFormat) {
+    cssSelectorEditDialog.detectedDateFormat = detectedFormat;
+    cssSelectorEditDialog.showDateFormatHint = true;
+    console.log('编辑对话框检测到日期格式:', detectedFormat, '输入:', dateStr);
+  } else {
+    cssSelectorEditDialog.showDateFormatHint = false;
+    console.log('编辑对话框未检测到日期格式，输入:', dateStr);
+  }
+};
+
+// 应用编辑对话框检测到的日期格式
+const applyEditDetectedDateFormat = () => {
+  if (cssSelectorEditDialog.detectedDateFormat) {
+    cssSelectorEditDialog.formData.datePattern = cssSelectorEditDialog.detectedDateFormat;
+    cssSelectorEditDialog.showDateFormatHint = false;
+    ElMessage.success('已应用检测到的日期格式');
+  }
+};
+
+// 测试日期格式识别函数
+const testDateFormatDetection = () => {
+  const testCases = [
+    'April 13, 2026',
+    'Apr 13, 2026',
+    '2026年4月13日',
+    '2026-04-13',
+    '2026/04/13',
+    '04/13/2026',
+    '13.04.2026',
+    '13-Apr-2026',
+    'April 13',
+    '2026年4月',
+    'april 13, 2026', // 小写测试
+    'APRIL 13, 2026', // 大写测试
+    'April  13,  2026', // 多个空格
+    'April.13.2026', // 点号分隔
+    '13 April 2026', // 日期在前
+    '2026年04月13日 14:30:45',
+    '2026-04-13 14:30',
+    '04/13/2026 2:30 PM',
+    'yyyy-MM-dd HH:mm:ss', // Java日期格式，应该不识别
+    'MMMM dd, yyyy',
+    '.date', // CSS选择器，应该不识别
+    '#date',
+    '[data-date]'
+  ];
+  
+  console.log('=== 日期格式识别测试 ===');
+  testCases.forEach(testCase => {
+    const result = detectDateFormat(testCase);
+    console.log(`输入: "${testCase}" => 结果: ${result ? `"${result}"` : '未识别'}`);
+  });
+  console.log('=== 测试结束 ===');
+};
+
+// 在组件挂载时运行测试（仅开发环境）
+onMounted(() => {
+  // 开发环境下运行测试
+  if (process.env.NODE_ENV === 'development') {
+    setTimeout(() => {
+      testDateFormatDetection();
+    }, 1000);
+  }
+});
+
 const handleDeleteCssSelector = async (row) => {
   try {
     await ElMessageBox.confirm('确定删除该CSS选择器吗？', '提示', {
@@ -1229,6 +1474,10 @@ const handleEditCssSelector = (row) => {
     datePattern: row.datePattern || '',
     enabled: row.enabled || 'ON'
   });
+  
+  // 重置日期格式识别状态
+  cssSelectorEditDialog.showDateFormatHint = false;
+  cssSelectorEditDialog.detectedDateFormat = '';
   
   if (cssSelectorEditFormRef.value) {
     cssSelectorEditFormRef.value.clearValidate();
@@ -1757,5 +2006,33 @@ const getLanguageGroups = computed(() => {
 
 .el-card__body {
   padding: 20px;
+}
+
+/* 日期格式提示样式 */
+.date-format-hint {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background-color: #f0f9ff;
+  border: 1px solid #91d5ff;
+  border-radius: 4px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.date-format-hint .hint-text {
+  color: #1890ff;
+  font-weight: 500;
+}
+
+.date-format-hint .el-button {
+  padding: 0 4px;
+  font-size: 12px;
+  height: auto;
+}
+
+.date-format-hint .el-button + .el-button {
+  margin-left: 8px;
 }
 </style>

@@ -29,5 +29,13 @@ export const taskLogApi = {
       method: 'post',
       data: params
     });
+  },
+
+  startAllTasks(params) {
+    return request({
+      url: '/manager/task-logs/start-all-tasks',
+      method: 'post',
+      data: params
+    });
   }
 };

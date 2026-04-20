@@ -94,9 +94,8 @@ public class SingleNewsTaskService implements Runnable {
                 updateTaskUrlLog(taskUrlLog, 0, "NO_NEWS", "未找到符合条件的新闻");
             } else {
                 updateTaskUrlLog(taskUrlLog, newsList.size(), "SUCCESS", null);
-                aiTaskComponent.startAiTask(newsList, taskId);
             }
-            
+            aiTaskComponent.startAiTask(newsList, taskId);
         } catch (Exception e) {
             log.error("新闻任务异常", e);
             // 记录错误信息

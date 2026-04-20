@@ -4,6 +4,7 @@ import com.archer.task.entity.TaskLog;
 import com.archer.task.manager.dto.PageRequest;
 import com.archer.task.manager.dto.TaskLogPageRequest;
 import com.archer.task.manager.dto.WebsiteNewsRequest;
+import com.archer.task.manager.dto.StartAllTasksRequest;
 import com.archer.task.manager.service.TaskLogManagerService;
 import com.archer.task.manager.vo.TaskDetailVO;
 import com.archer.task.manager.vo.WebsiteNewsVO;
@@ -50,6 +51,17 @@ public class TaskLogManagerController {
             request.getTaskId(),
             request.getPage(),
             request.getSize()
+        );
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/start-all-tasks")
+    public ResponseEntity<Boolean> startAllTasks(@RequestBody StartAllTasksRequest request) {
+        boolean result = taskLogManagerService.startAllTasks(
+            request.getStartDate(),
+            request.getEndDate(),
+            request.getTaskType(),
+            request.getConcurrentCount()
         );
         return ResponseEntity.ok(result);
     }

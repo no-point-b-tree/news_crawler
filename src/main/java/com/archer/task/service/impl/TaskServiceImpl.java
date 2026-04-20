@@ -100,8 +100,73 @@ public class TaskServiceImpl implements TaskService {
         } catch (Exception e) {
             log.error("task error", e);
         }
+    }
 
+    @Override
+    public void startTask(Date startDate, Date endDate) {
+        startTask(startDate, endDate, null, null);
+    }
 
+    @Override
+    public void startTask(Date startDate, Date endDate, String taskType, Integer concurrentCount) {
+        try {
+            TaskLog taskLog = new TaskLog();
+            taskLog.setTaskType(taskType != null && !taskType.trim().isEmpty() ? taskType : "手动任务");
+            taskLog.setStartDate(startDate);
+            taskLog.setEndDate(endDate);
+            taskLog.setStatus(TaskStatusEnum.RUNNING.name());
+            taskLog.setCreateTime(new Date());
+            taskLog.setUpdateTime(new Date());
+            taskLog.setIsDelete("N");
+            taskLogService.save(taskLog);
+
+            QueryWrapper<RssLink> rssLinkQuery = new QueryWrapper<>();
+            rssLinkQuery.eq("is_delete", "N");
+            List<RssLink> rssLinks = rssLinkMapper.selectList(rssLinkQuery);
+            List<String> rssLinkList = rssLinks.stream().map(RssLink::getUrl).toList();
+
+            QueryWrapper<NewsLink> newsQuery = new QueryWrapper<>();
+            newsQuery.eq("is_delete", "N");
+            List<NewsLink> newsLinks = newsLinkMapper.selectList(newsQuery);
+
+            // 根据taskType过滤任务
+            List<String> filteredRssLinkList = rssLinkList;
+            List<NewsLink> filteredNewsLinks = newsLinks;
+
+            if (taskType != null && !taskType.trim().isEmpty()) {
+                if ("RSS".equalsIgnoreCase(taskType)) {
+                    filteredNewsLinks = new ArrayList<>(); // 只执行RSS任务
+                } else if ("NEWS".equalsIgnoreCase(taskType)) {
+                    filteredRssLinkList = new ArrayList<String>(); // 只执行新闻任务
+                }
+            }
+
+            CountDownLatch countDownLatch = new CountDownLatch(filteredRssLinkList.size() + filteredNewsLinks.size());
+            CountDownLatch aiCountDown = new CountDownLatch(filteredRssLinkList.size() + filteredNewsLinks.size());
+            aiTaskComponent.setTaskCountDown(taskLog.getId(), aiCountDown);
+            for (String rssLink : filteredRssLinkList) {
+                SingleRssTaskService task = new SingleRssTaskService(rssLink, startDate, endDate, taskLog.getId(), LatestSpiderTaskServiceImpl.getInstance(active), newsMapper, countDownLatch, aiTaskComponent);
+                threadPool.execute(task);
+            }
+
+            for (NewsLink newsLink : filteredNewsLinks) {
+                List<CssSelectorLinkRelation> cssSelectors = cssSelectorLinkRelationService.findByUrl(newsLink.getUrl());
+                if (!cssSelectors.isEmpty()) {
+                    SingleNewsTaskService task = new SingleNewsTaskService(newsLink, LatestSpiderTaskServiceImpl.getInstance(active), cssSelectors, newsMapper, taskLog.getId(), countDownLatch, startDate, endDate, aiTaskComponent, taskUrlLogMapper);
+                    threadPool.execute(task);
+                }
+            }
+
+            countDownLatch.await();
+            aiCountDown.await();
+
+            taskLog.setStatus(TaskStatusEnum.FINISHED.name());
+            taskLog.setUpdateTime(new Date());
+            taskLogService.updateById(taskLog);
+
+        } catch (Exception e) {
+            log.error("手动任务执行错误", e);
+        }
     }
 
 }
