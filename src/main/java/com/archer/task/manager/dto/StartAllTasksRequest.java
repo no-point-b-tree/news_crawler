@@ -22,9 +22,4 @@ public class StartAllTasksRequest {
      * 任务类型（可选）
      */
     private String taskType;
-    
-    /**
-     * 并发数量
-     */
-    private Integer concurrentCount = 3;
 }

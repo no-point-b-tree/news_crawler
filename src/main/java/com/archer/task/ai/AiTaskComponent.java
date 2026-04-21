@@ -71,6 +71,7 @@ public class AiTaskComponent {
                     update.set("status", NewsStatusEnum.IS_NOT_RELEVANT);
                 }
                 update.set("summary", node.get("summary").asText());
+                update.set("chinese_content", node.get("chineseContent").asText());
                 newsMapper.update(update);
             } catch (Exception e) {
                 log.error("AI处理失败, 新闻ID:{}", news.getId());

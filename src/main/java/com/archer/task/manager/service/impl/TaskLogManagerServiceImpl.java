@@ -177,18 +177,18 @@ public class TaskLogManagerServiceImpl extends ServiceImpl<TaskLogMapper, TaskLo
     }
 
     @Override
-    public boolean startAllTasks(String startDate, String endDate, String taskType, Integer concurrentCount) {
+    public boolean startAllTasks(String startDate, String endDate, String taskType) {
         try {
-            log.info("开始执行所有任务，参数: startDate={}, endDate={}, taskType={}, concurrentCount={}",
-                    startDate, endDate, taskType, concurrentCount);
+            log.info("开始执行所有任务，参数: startDate={}, endDate={}, taskType={}",
+                    startDate, endDate, taskType);
 
             // 解析日期字符串为Date对象
             java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             Date start = sdf.parse(startDate);
             Date end = sdf.parse(endDate);
 
-            // 调用TaskService执行任务，传递所有参数
-            taskService.startTask(start, end, taskType, concurrentCount);
+            // 调用TaskService执行任务
+            taskService.startTask(start, end, taskType);
 
             log.info("所有任务已开始执行");
             return true;

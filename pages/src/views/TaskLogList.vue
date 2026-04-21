@@ -391,16 +391,7 @@
             </el-select>
           </el-form-item>
           
-          <el-form-item label="并发数量">
-            <el-input-number
-              v-model="executeAllTasksDialog.formData.concurrentCount"
-              :min="1"
-              :max="10"
-              placeholder="并发执行的任务数量"
-              style="width: 100%"
-            />
-            <div class="form-tip">建议值：1-5，根据服务器性能调整</div>
-          </el-form-item>
+
         </el-form>
         
         <template #footer>
@@ -453,8 +444,7 @@ const executeAllTasksDialog = reactive({
   formData: {
     startDate: '',
     endDate: '',
-    taskType: '',
-    concurrentCount: 3
+    taskType: ''
   }
 });
 
@@ -553,7 +543,6 @@ const handleExecuteAllTasks = () => {
   executeAllTasksDialog.formData.startDate = formatDateTime(yesterday);
   executeAllTasksDialog.formData.endDate = formatDateTime(now);
   executeAllTasksDialog.formData.taskType = '';
-  executeAllTasksDialog.formData.concurrentCount = 3;
   
   executeAllTasksDialog.visible = true;
   executeAllTasksDialog.loading = false;
@@ -574,8 +563,7 @@ const handleExecuteAllTasksSubmit = async () => {
     const params = {
       startDate: executeAllTasksDialog.formData.startDate,
       endDate: executeAllTasksDialog.formData.endDate,
-      taskType: executeAllTasksDialog.formData.taskType || undefined,
-      concurrentCount: executeAllTasksDialog.formData.concurrentCount
+      taskType: executeAllTasksDialog.formData.taskType || undefined
     };
     
     // 这里需要调用后端的执行所有任务接口

@@ -16,5 +16,5 @@ public interface TaskLogManagerService extends IService<TaskLog> {
 
     Page<WebsiteNewsVO> getWebsiteNews(String sourceUrl, Long taskId, Integer page, Integer size);
 
-    boolean startAllTasks(String startDate, String endDate, String taskType, Integer concurrentCount);
+    boolean startAllTasks(String startDate, String endDate, String taskType);
 }

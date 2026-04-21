@@ -32,7 +32,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class LatestSpiderTaskServiceImpl implements LatestSpiderTaskService {
 
-    private static final ArrayBlockingQueue<LatestSpiderTaskServiceImpl> queue = new ArrayBlockingQueue<>(10);
+    private static final ArrayBlockingQueue<LatestSpiderTaskServiceImpl> queue = new ArrayBlockingQueue<>(50);
 
     static volatile Properties properties;
 
@@ -60,6 +60,8 @@ public class LatestSpiderTaskServiceImpl implements LatestSpiderTaskService {
             return queue.take();
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
+        } finally {
+            log.info("获取爬虫实例成功");
         }
     }
 
@@ -103,12 +105,9 @@ public class LatestSpiderTaskServiceImpl implements LatestSpiderTaskService {
     @Override
     public List<String> findRssUrlList(String url) {
         Set<String> rssUrls = new HashSet<>();
-        Browser browser = getBrowser();
-        Page page = null;
 
-        try {
+        try (Browser browser = getBrowser(); Page page = browser.newPage()) {
 
-            page = browser.newPage();
             page.setViewportSize(1920, 1080);
 
             page.navigate(url, new Page.NavigateOptions());
@@ -131,8 +130,6 @@ public class LatestSpiderTaskServiceImpl implements LatestSpiderTaskService {
 
         } catch (Exception e) {
             log.error("Failed to find RSS URLs from {}: {}", url, e.getMessage());
-        } finally {
-            page.close();
         }
 
         return new ArrayList<>(rssUrls);
@@ -368,8 +365,7 @@ public class LatestSpiderTaskServiceImpl implements LatestSpiderTaskService {
     @Override
     public List<Article> parseRss(String rssUrl) {
         List<Article> articles = new ArrayList<>();
-        try (Browser browser = getBrowser()) {
-            Page page = browser.newPage();
+        try (Browser browser = getBrowser(); Page page = browser.newPage();) {
             page.setViewportSize(1920, 1080);
             Response response = page.navigate(rssUrl, new Page.NavigateOptions());
             String xmlContent = response.text();
@@ -428,8 +424,7 @@ public class LatestSpiderTaskServiceImpl implements LatestSpiderTaskService {
     public Article getArticleContent(String articleUrl) {
         Article article = new Article();
 
-        try (Browser browser = getBrowser()) {
-            Page page = browser.newPage();
+        try (Browser browser = getBrowser(); Page page = browser.newPage()) {
             page.setViewportSize(1920, 1080);
             page.navigate(articleUrl, new Page.NavigateOptions());
             page.waitForLoadState(LoadState.DOMCONTENTLOADED);
@@ -437,7 +432,6 @@ public class LatestSpiderTaskServiceImpl implements LatestSpiderTaskService {
             article.setUrl(articleUrl);
             article.setTitle(title);
             article.setContent(page.content());
-
         } catch (Exception e) {
             log.error("Failed to get article content from {}", articleUrl, e);
         }

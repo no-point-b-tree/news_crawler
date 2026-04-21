@@ -21,6 +21,8 @@ public class News {
 
     private String tikaContent;
 
+    private String chineseContent;
+
     private String source;
 
     private String summary;

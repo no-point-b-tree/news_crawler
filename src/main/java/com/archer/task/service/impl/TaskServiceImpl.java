@@ -104,11 +104,11 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public void startTask(Date startDate, Date endDate) {
-        startTask(startDate, endDate, null, null);
+        startTask(startDate, endDate, null);
     }
 
     @Override
-    public void startTask(Date startDate, Date endDate, String taskType, Integer concurrentCount) {
+    public void startTask(Date startDate, Date endDate, String taskType) {
         try {
             TaskLog taskLog = new TaskLog();
             taskLog.setTaskType(taskType != null && !taskType.trim().isEmpty() ? taskType : "手动任务");
@@ -151,10 +151,8 @@ public class TaskServiceImpl implements TaskService {
 
             for (NewsLink newsLink : filteredNewsLinks) {
                 List<CssSelectorLinkRelation> cssSelectors = cssSelectorLinkRelationService.findByUrl(newsLink.getUrl());
-                if (!cssSelectors.isEmpty()) {
-                    SingleNewsTaskService task = new SingleNewsTaskService(newsLink, LatestSpiderTaskServiceImpl.getInstance(active), cssSelectors, newsMapper, taskLog.getId(), countDownLatch, startDate, endDate, aiTaskComponent, taskUrlLogMapper);
-                    threadPool.execute(task);
-                }
+                SingleNewsTaskService task = new SingleNewsTaskService(newsLink, LatestSpiderTaskServiceImpl.getInstance(active), cssSelectors, newsMapper, taskLog.getId(), countDownLatch, startDate, endDate, aiTaskComponent, taskUrlLogMapper);
+                threadPool.execute(task);
             }
 
             countDownLatch.await();

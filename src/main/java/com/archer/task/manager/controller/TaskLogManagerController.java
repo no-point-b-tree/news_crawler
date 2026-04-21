@@ -60,8 +60,7 @@ public class TaskLogManagerController {
         boolean result = taskLogManagerService.startAllTasks(
             request.getStartDate(),
             request.getEndDate(),
-            request.getTaskType(),
-            request.getConcurrentCount()
+            request.getTaskType()
         );
         return ResponseEntity.ok(result);
     }

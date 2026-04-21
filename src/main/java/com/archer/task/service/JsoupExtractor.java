@@ -19,6 +19,8 @@ public class JsoupExtractor {
 
     public static List<String> MATCH_RULE_LIST = Arrays.asList("\\d+小时前", "\\d+分钟前", "\\d+\\s+mins?\\s+ago", "\\d+\\s+hours?\\s+ago");
 
+    private static final boolean LOOK_ALL_LINKS = true;
+
     public static List<Hyperlink> extractor(String htmlContent, List<CssSelectorLinkRelation> cssSelectorList, Locale locale) {
         if (htmlContent == null) {
             return Collections.emptyList();
@@ -27,6 +29,20 @@ public class JsoupExtractor {
         // 找出所有文本内容为日期的元素
         Set<String> hrefSet = new HashSet<>();
         List<Hyperlink> hyperlinkListAll = new ArrayList<>();
+        if (LOOK_ALL_LINKS) {
+            Elements elements = doc.select("a[href]");
+            for (Element itemElement : elements) {
+                String href = itemElement.attr("href");
+                if (hrefSet.add(href)) {
+                    String text = itemElement.text();
+                    Hyperlink hyperlink = new Hyperlink();
+                    hyperlink.setHref(href);
+                    hyperlink.setContent(text);
+                    hyperlinkListAll.add(hyperlink);
+                }
+            }
+            return hyperlinkListAll;
+        }
         if (cssSelectorList != null && !cssSelectorList.isEmpty()) {
             for (CssSelectorLinkRelation cssSelectorLinkRelation : cssSelectorList) {
                 String groupSelector = cssSelectorLinkRelation.getCssSelectorGroup();

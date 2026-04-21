@@ -52,9 +52,9 @@ public class SingleRssTaskService implements Runnable {
     @Override
     public void run() {
         // 一个网站回来的所有文章 插入
+        List<News> newsList = new ArrayList<>();
         try {
             List<Article> rssResult = latestSpiderTaskService.getRssResult(Collections.singletonList(rssUrl), startDate, endDate);
-            List<News> newsList = new ArrayList<>();
             for (Article article : rssResult) {
                 if (newsMapper.getCountByUrl(article.getUrl()) > 0) {
                     continue;
@@ -96,13 +96,13 @@ public class SingleRssTaskService implements Runnable {
                 newsMapper.insert(news);
                 newsList.add(news);
             }
-            aiTaskComponent.startAiTask(newsList, taskId);
         } catch (Exception e) {
             log.error("rss异常:", e);
         } finally {
             countDownLatch.countDown();
             latestSpiderTaskService.release();
             log.info("剩余任务数量:{}", countDownLatch.getCount());
+            aiTaskComponent.startAiTask(newsList, taskId);
         }
     }
 }
