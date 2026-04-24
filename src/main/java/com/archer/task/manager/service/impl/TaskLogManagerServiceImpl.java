@@ -183,12 +183,14 @@ public class TaskLogManagerServiceImpl extends ServiceImpl<TaskLogMapper, TaskLo
                     startDate, endDate, taskType);
 
             // 解析日期字符串为Date对象
-            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd");
             Date start = sdf.parse(startDate);
             Date end = sdf.parse(endDate);
 
             // 调用TaskService执行任务
-            taskService.startTask(start, end, taskType);
+            new Thread(() -> {
+                taskService.startTask(start, end, taskType);
+            }, "task-start-thread").start();
 
             log.info("所有任务已开始执行");
             return true;

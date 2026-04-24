@@ -1,6 +1,10 @@
 package com.archer;
 
+import com.archer.task.service.impl.LatestSpiderTaskServiceImpl;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.Resource;
 import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -11,19 +15,18 @@ import lombok.extern.slf4j.Slf4j;
 @MapperScan("com.archer.**.mapper")
 public class App {
 
+    @Value("${spring.profiles.active}")
+    private String active;
 
     public static void main(String[] args) {
         SpringApplication.run(App.class, args);
     }
 
-//	@PostConstruct
-//	public void init() {
-//		String url ="https://www.boe.es/";
-//		List<Article> newsPageList = latestSpiderTaskService.getNewsPageResult(latestSpiderTaskService.findNewsPageUrlList(url));
-//		List<Article> rssResult = latestSpiderTaskService.getRssResult(latestSpiderTaskService.findRssUrlList(url));
-//		log.info("rssResult: {}",rssResult);
-//		log.info("newsPageList: {}",newsPageList);
-//		
-//	}
+    @PostConstruct
+    public void init() {
+        LatestSpiderTaskServiceImpl instance = LatestSpiderTaskServiceImpl.getInstance(active);
+        instance.release();
+        log.info("初始化成功");
+    }
 
 }

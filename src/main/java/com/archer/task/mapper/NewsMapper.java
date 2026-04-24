@@ -7,7 +7,7 @@ import org.apache.ibatis.annotations.Select;
 
 public interface NewsMapper  extends BaseMapper<News> {
 
-    @Select("select count(*) from news where url=#{url}")
+    @Select("select count(*) from news where url=#{url} and is_delete = 'N'")
     int getCountByUrl(@Param("url") String url);
 
 }

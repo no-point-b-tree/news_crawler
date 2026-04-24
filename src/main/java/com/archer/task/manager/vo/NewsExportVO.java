@@ -1,5 +1,6 @@
 package com.archer.task.manager.vo;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 
 import java.util.Date;
@@ -29,6 +30,22 @@ public class NewsExportVO {
      * 新闻摘要
      */
     private String summary;
+    
+    /**
+     * 新闻内容（原始内容）
+     */
+    @JsonIgnore
+    private String content;
+    
+    /**
+     * Tika处理后的内容（紧凑型文本）
+     */
+    private String tikaContent;
+    
+    /**
+     * 中文翻译内容
+     */
+    private String chineseContent;
     
     /**
      * 发布时间

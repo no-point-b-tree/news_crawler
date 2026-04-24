@@ -19,7 +19,7 @@ public class JsoupExtractor {
 
     public static List<String> MATCH_RULE_LIST = Arrays.asList("\\d+小时前", "\\d+分钟前", "\\d+\\s+mins?\\s+ago", "\\d+\\s+hours?\\s+ago");
 
-    private static final boolean LOOK_ALL_LINKS = true;
+    public static final boolean LOOK_ALL_LINKS = false;
 
     public static List<Hyperlink> extractor(String htmlContent, List<CssSelectorLinkRelation> cssSelectorList, Locale locale) {
         if (htmlContent == null) {
@@ -91,7 +91,7 @@ public class JsoupExtractor {
                 }
             }
         }
-
+        log.info("查找到超链接数量: {}", hyperlinkListAll.size());
         return hyperlinkListAll;
     }
 

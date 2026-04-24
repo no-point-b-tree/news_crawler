@@ -358,22 +358,22 @@
           label-width="100px"
           :disabled="executeAllTasksDialog.loading"
         >
-          <el-form-item label="开始时间" required>
+          <el-form-item label="开始日期" required>
             <el-date-picker
               v-model="executeAllTasksDialog.formData.startDate"
-              type="datetime"
-              placeholder="选择开始时间"
-              value-format="YYYY-MM-DD HH:mm:ss"
+              type="date"
+              placeholder="选择开始日期"
+              value-format="YYYY-MM-DD"
               style="width: 100%"
             />
           </el-form-item>
           
-          <el-form-item label="结束时间" required>
+          <el-form-item label="结束日期" required>
             <el-date-picker
               v-model="executeAllTasksDialog.formData.endDate"
-              type="datetime"
-              placeholder="选择结束时间"
-              value-format="YYYY-MM-DD HH:mm:ss"
+              type="date"
+              placeholder="选择结束日期"
+              value-format="YYYY-MM-DD"
               style="width: 100%"
             />
           </el-form-item>
@@ -529,19 +529,16 @@ const handleExecuteAllTasks = () => {
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
   
-  // 格式化日期为yyyy-MM-dd HH:mm:ss格式
-  const formatDateTime = (date) => {
+  // 格式化日期为yyyy-MM-dd格式
+  const formatDateOnly = (date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    return `${year}-${month}-${day}`;
   };
   
-  executeAllTasksDialog.formData.startDate = formatDateTime(yesterday);
-  executeAllTasksDialog.formData.endDate = formatDateTime(now);
+  executeAllTasksDialog.formData.startDate = formatDateOnly(yesterday);
+  executeAllTasksDialog.formData.endDate = formatDateOnly(now);
   executeAllTasksDialog.formData.taskType = '';
   
   executeAllTasksDialog.visible = true;

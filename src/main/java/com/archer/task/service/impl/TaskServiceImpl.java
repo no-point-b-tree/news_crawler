@@ -124,7 +124,6 @@ public class TaskServiceImpl implements TaskService {
             rssLinkQuery.eq("is_delete", "N");
             List<RssLink> rssLinks = rssLinkMapper.selectList(rssLinkQuery);
             List<String> rssLinkList = rssLinks.stream().map(RssLink::getUrl).toList();
-
             QueryWrapper<NewsLink> newsQuery = new QueryWrapper<>();
             newsQuery.eq("is_delete", "N");
             List<NewsLink> newsLinks = newsLinkMapper.selectList(newsQuery);

@@ -110,6 +110,9 @@ public class SingleNewsTaskService implements Runnable {
     }
 
     public boolean isValidDate(Date startDate, Date endDate, Date publishDate) {
+        if (JsoupExtractor.LOOK_ALL_LINKS) {
+            return true;
+        }
         if (endDate == null) {
             endDate = new Date();
         }

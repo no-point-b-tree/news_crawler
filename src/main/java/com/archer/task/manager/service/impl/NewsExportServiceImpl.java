@@ -162,6 +162,9 @@ public class NewsExportServiceImpl implements NewsExportService {
         vo.setTitle(news.getTitle());
         vo.setZhTitle(news.getZhTitle());
         vo.setSummary(news.getSummary());
+        vo.setContent(news.getContent());
+        vo.setTikaContent(news.getTikaContent());
+        vo.setChineseContent(news.getChineseContent());
         vo.setPublishTime(news.getPublishTime());
         vo.setSourceType(news.getSource());
         vo.setUrl(news.getUrl());
