@@ -115,6 +115,18 @@ export const newsLinkApi = {
     });
   },
 
+  findHyperLinkCount(url, timeRange) {
+    return request({
+      url: '/manager/news-links/hyper-link-count',
+      method: 'post',
+      data: {
+        url,
+        ...(timeRange && { startDate: timeRange.startDate }),
+        ...(timeRange && { endDate: timeRange.endDate })
+      }
+    });
+  },
+
   deleteCssSelector(id) {
     return request({
       url: `/manager/news-links/css-selectors/${id}`,

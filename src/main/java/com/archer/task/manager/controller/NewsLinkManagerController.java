@@ -91,6 +91,16 @@ public class NewsLinkManagerController {
         return ResponseEntity.ok(result);
     }
 
+    @PostMapping("/hyper-link-count")
+    public ResponseEntity<Integer> findHyperLinkCount(@RequestBody UrlRequest request) {
+        int result = newsLinkManagerService.findHyperLinkCount(
+            request.getUrl(),
+            request.getStartDate(),
+            request.getEndDate()
+        );
+        return ResponseEntity.ok(result);
+    }
+
     @PostMapping("/task-logs/page")
     public ResponseEntity<Page<TaskLog>> pageTaskLogsByUrl(@RequestBody TaskLogPageByUrlRequest request) {
         Page<TaskLog> result = newsLinkManagerService.pageTaskLogsByUrl(request.getUrl(), request.getPage(), request.getSize());

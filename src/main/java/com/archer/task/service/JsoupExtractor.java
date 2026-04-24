@@ -53,16 +53,17 @@ public class JsoupExtractor {
                     Element date = itemElement.select(cssSelectorLinkRelation.getDateCssSelector()).first();
                     if (link != null && date != null) {
                         String href = link.attr("href");
-                        if (hrefSet.add(href)) {
+                        if (!hrefSet.contains(href)) {
                             String text = link.text();
                             Hyperlink hyperlink = new Hyperlink();
                             hyperlink.setHref(href);
                             hyperlink.setContent(text);
                             try {
                                 // 如果自定义规则解析失败或没有自定义规则，尝试通用规则
+                                String dateStr = date.ownText().trim();
                                 if (hyperlink.getDate() == null) {
                                     for (String rule : MATCH_RULE_LIST) {
-                                        if (date.text().matches(rule)) {
+                                        if (dateStr.matches(rule)) {
                                             hyperlink.setDate(new Date());
                                             break;
                                         }
@@ -72,10 +73,10 @@ public class JsoupExtractor {
                                 String datePattern = cssSelectorLinkRelation.getDatePattern();
                                 if (datePattern != null && !datePattern.trim().isEmpty() && hyperlink.getDate() == null) {
                                     try {
-                                        Date publishDate = DateUtils.parseDate(date.text().trim(), locale, datePattern);
+                                        Date publishDate = DateUtils.parseDate(dateStr, locale, datePattern);
                                         hyperlink.setDate(publishDate);
                                     } catch (Exception e) {
-                                        log.warn("使用自定义日期模式解析失败: {}, pattern: {}", date.text(), datePattern);
+                                        log.warn("使用自定义日期模式解析失败: {}, pattern: {}", dateStr, datePattern);
                                     }
                                 }
 
@@ -83,6 +84,7 @@ public class JsoupExtractor {
                                 log.error("日期转换失败:", e);
                             }
                             if (hyperlink.getDate() != null) {
+                                hrefSet.add(hyperlink.getHref());
                                 hyperlinkListAll.add(hyperlink);
                             }
                         }
@@ -93,6 +95,22 @@ public class JsoupExtractor {
         }
         log.info("查找到超链接数量: {}", hyperlinkListAll.size());
         return hyperlinkListAll;
+    }
+
+    public static boolean isValidDate(Date startDate, Date endDate, Date publishDate) {
+        if (JsoupExtractor.LOOK_ALL_LINKS) {
+            return true;
+        }
+        if (endDate == null) {
+            endDate = new Date();
+        }
+        if (startDate == null) {
+            startDate = DateUtils.addDays(endDate, -1);
+        }
+        if (publishDate == null) {
+            publishDate = new Date();
+        }
+        return publishDate.compareTo(startDate) >= 0 && publishDate.compareTo(endDate) <= 0;
     }
 
 }

@@ -191,6 +191,7 @@
             <div class="action-buttons">
               <el-button type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
               <el-button type="success" size="small" @click="handleStartTask(row)">执行任务</el-button>
+              <el-button type="warning" size="small" @click="handleHyperLinkDetect(row)">链接探测</el-button>
               <el-button type="danger" size="small" @click="handleDelete(row)">删除</el-button>
             </div>
           </template>
@@ -552,10 +553,61 @@
              开始执行
            </el-button>
          </span>
-       </template>
-     </el-dialog>
-   </div>
- </template>
+        </template>
+      </el-dialog>
+
+      <el-dialog
+        v-model="hyperLinkDialog.visible"
+        title="链接探测"
+        width="500px"
+        @close="handleHyperLinkClose"
+      >
+        <el-form
+          ref="hyperLinkFormRef"
+          :model="hyperLinkDialog.formData"
+          :rules="hyperLinkDialog.formRules"
+          label-width="120px"
+          label-position="left"
+        >
+          <el-form-item label="URL">
+            <el-input v-model="hyperLinkDialog.currentUrl" disabled />
+          </el-form-item>
+          <el-form-item label="开始时间" prop="startDate">
+            <el-date-picker
+              v-model="hyperLinkDialog.formData.startDate"
+              type="date"
+              placeholder="选择开始日期"
+              value-format="YYYY-MM-DD"
+              style="width: 100%"
+            />
+          </el-form-item>
+          <el-form-item label="结束时间" prop="endDate">
+            <el-date-picker
+              v-model="hyperLinkDialog.formData.endDate"
+              type="date"
+              placeholder="选择结束日期"
+              value-format="YYYY-MM-DD"
+              style="width: 100%"
+            />
+          </el-form-item>
+          <el-form-item v-if="hyperLinkDialog.result !== null" label="探测结果">
+            <el-tag type="success" size="large">
+              符合要求的链接数：{{ hyperLinkDialog.result }}
+            </el-tag>
+          </el-form-item>
+        </el-form>
+
+        <template #footer>
+          <span class="dialog-footer">
+            <el-button @click="handleHyperLinkClose">关闭</el-button>
+            <el-button type="primary" @click="handleHyperLinkSubmit" :loading="hyperLinkDialog.loading">
+              开始探测
+            </el-button>
+          </span>
+        </template>
+      </el-dialog>
+    </div>
+  </template>
 
 <script setup>
 import { ref, reactive, onMounted, watch, computed } from 'vue';
@@ -674,6 +726,27 @@ const taskTimeDialog = reactive({
 });
 
 const taskTimeFormRef = ref();
+
+const hyperLinkDialog = reactive({
+  visible: false,
+  loading: false,
+  currentUrl: '',
+  result: null,
+  formData: {
+    startDate: '',
+    endDate: ''
+  },
+  formRules: {
+    startDate: [
+      { required: true, message: '请选择开始时间', trigger: 'change' }
+    ],
+    endDate: [
+      { required: true, message: '请选择结束时间', trigger: 'change' }
+    ]
+  }
+});
+
+const hyperLinkFormRef = ref();
 
 const formRules = {
   name: [
@@ -1046,6 +1119,56 @@ const handleTaskTimeClose = () => {
   taskTimeDialog.formData.startDate = '';
   taskTimeDialog.formData.endDate = '';
   taskTimeDialog.currentUrl = '';
+};
+
+const handleHyperLinkDetect = (row) => {
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const formatDate = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  hyperLinkDialog.currentUrl = row.url;
+  hyperLinkDialog.formData.startDate = formatDate(yesterday);
+  hyperLinkDialog.formData.endDate = formatDate(now);
+  hyperLinkDialog.result = null;
+  hyperLinkDialog.visible = true;
+  if (hyperLinkFormRef.value) {
+    hyperLinkFormRef.value.clearValidate();
+  }
+};
+
+const handleHyperLinkSubmit = async () => {
+  try {
+    await hyperLinkFormRef.value.validate();
+    hyperLinkDialog.loading = true;
+    hyperLinkDialog.result = null;
+    const count = await newsLinkApi.findHyperLinkCount(hyperLinkDialog.currentUrl, {
+      startDate: hyperLinkDialog.formData.startDate,
+      endDate: hyperLinkDialog.formData.endDate
+    });
+    hyperLinkDialog.result = count;
+    ElMessage.success(`探测完成，找到 ${count} 个符合要求的超链接`);
+  } catch (error) {
+    if (error && error.errors) {
+      ElMessage.error('请检查表单数据');
+    } else if (error !== 'cancel') {
+      ElMessage.error('链接探测失败');
+    }
+  } finally {
+    hyperLinkDialog.loading = false;
+  }
+};
+
+const handleHyperLinkClose = () => {
+  hyperLinkDialog.visible = false;
+  hyperLinkDialog.formData.startDate = '';
+  hyperLinkDialog.formData.endDate = '';
+  hyperLinkDialog.currentUrl = '';
+  hyperLinkDialog.result = null;
 };
 
 const handleBatchDelete = async () => {

@@ -2,9 +2,7 @@ package com.archer.task.manager.service.impl;
 
 import com.archer.task.ai.AiTaskComponent;
 import com.archer.task.constant.TaskStatusEnum;
-import com.archer.task.entity.CssSelectorLinkRelation;
-import com.archer.task.entity.NewsLink;
-import com.archer.task.entity.TaskLog;
+import com.archer.task.entity.*;
 import com.archer.task.manager.service.NewsLinkManagerService;
 import com.archer.task.mapper.CssSelectorLinkRelationMapper;
 import com.archer.task.mapper.NewsLinkMapper;
@@ -12,6 +10,7 @@ import com.archer.task.mapper.NewsMapper;
 import com.archer.task.mapper.TaskLogMapper;
 import com.archer.task.mapper.TaskUrlLogMapper;
 import com.archer.task.service.CssSelectorLinkRelationService;
+import com.archer.task.service.JsoupExtractor;
 import com.archer.task.service.SingleNewsTaskService;
 import com.archer.task.service.TaskService;
 import com.archer.task.service.impl.LatestSpiderTaskServiceImpl;
@@ -271,6 +270,54 @@ public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, News
         } catch (Exception e) {
             log.error("Failed to start single task for url: {}", url, e);
             return false;
+        }
+    }
+
+    @Override
+    public int findHyperLinkCount(String url, String startDateStr, String endDateStr) {
+        // 解析时间范围
+        Date startDate;
+        Date endDate;
+        if (startDateStr != null && !startDateStr.trim().isEmpty() &&
+                endDateStr != null && !endDateStr.trim().isEmpty()) {
+            // 使用前端传递的时间范围
+            try {
+                startDate = DateUtils.parseDate(startDateStr + " 00:00:00", "yyyy-MM-dd HH:mm:ss");
+                endDate = DateUtils.parseDate(endDateStr + " 23:59:59", "yyyy-MM-dd HH:mm:ss");
+            } catch (Exception e) {
+                log.error("Failed to parse date range: startDate={}, endDate={}", startDateStr, endDateStr, e);
+                // 如果解析失败，使用默认值（前一天到今天）
+                Date current = new Date();
+                startDate = DateUtils.addDays(current, -1);
+                endDate = current;
+            }
+        } else {
+            // 使用默认值（前一天到今天）
+            Date current = new Date();
+            startDate = DateUtils.addDays(current, -1);
+            endDate = current;
+        }
+        QueryWrapper<NewsLink> wrapper = new QueryWrapper<>();
+        wrapper.eq("is_delete", "N");
+        wrapper.eq("url", url);
+        wrapper.last("limit 1");
+        NewsLink newsLink = newsLinkMapper.selectOne(wrapper);
+        List<CssSelectorLinkRelation> cssSelectors = cssSelectorLinkRelationService.findByUrl(newsLink.getUrl());
+        LatestSpiderTaskServiceImpl latestSpiderTaskService = LatestSpiderTaskServiceImpl.getInstance(active);
+        try {
+            Article article = latestSpiderTaskService.getArticleContent(url);
+            String lang = newsLink.getLang();
+            Locale locale = new Locale(lang);
+            List<Hyperlink> hyperlinks = JsoupExtractor.extractor(article.getContent(), cssSelectors, locale);
+            int count = 0;
+            for (Hyperlink hyperlink : hyperlinks) {
+                if (JsoupExtractor.isValidDate(startDate, endDate, hyperlink.getDate())) {
+                    count++;
+                }
+            }
+            return count;
+        } finally {
+            latestSpiderTaskService.release();
         }
     }
 

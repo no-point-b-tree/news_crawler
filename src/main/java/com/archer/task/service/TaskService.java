@@ -10,5 +10,4 @@ public interface TaskService {
     void startTask(Date startDate, Date endDate);
     
     void startTask(Date startDate, Date endDate, String taskType);
-
 }

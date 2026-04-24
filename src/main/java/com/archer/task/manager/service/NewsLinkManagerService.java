@@ -25,6 +25,8 @@ public interface NewsLinkManagerService extends IService<NewsLink> {
 
     boolean startSingleTask(String url, String startDate, String endDate);
 
+    int findHyperLinkCount(String url, String startDate, String endDate);
+
     Page<TaskLog> pageTaskLogsByUrl(String url, Integer page, Integer size);
 
     Page<com.archer.task.entity.CssSelectorLinkRelation> pageCssSelectorsByUrl(String url, Integer page, Integer size);

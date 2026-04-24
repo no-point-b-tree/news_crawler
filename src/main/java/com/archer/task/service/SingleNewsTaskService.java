@@ -76,7 +76,7 @@ public class SingleNewsTaskService implements Runnable {
             List<Hyperlink> hyperLinks = JsoupExtractor.extractor(newsPageContent.getContent(), cssSelectorLinkRelationList, locale);
 
             for (Hyperlink hyperLink : hyperLinks) {
-                if (isValidDate(startDate, endDate, hyperLink.getDate())) {
+                if (JsoupExtractor.isValidDate(startDate, endDate, hyperLink.getDate())) {
                     if (hyperLink.getHref().startsWith("/")) {
                         // 相对路径转绝对路径
                         hyperLink.setHref(UrlUtils.extractBaseUrl(newsLink.getUrl()) + hyperLink.getHref());
@@ -107,22 +107,6 @@ public class SingleNewsTaskService implements Runnable {
             log.info("剩余任务数量:{}", countDownLatch.getCount());
             aiTaskComponent.startAiTask(newsList, taskId);
         }
-    }
-
-    public boolean isValidDate(Date startDate, Date endDate, Date publishDate) {
-        if (JsoupExtractor.LOOK_ALL_LINKS) {
-            return true;
-        }
-        if (endDate == null) {
-            endDate = new Date();
-        }
-        if (startDate == null) {
-            startDate = DateUtils.addDays(endDate, -1);
-        }
-        if (publishDate == null) {
-            publishDate = new Date();
-        }
-        return publishDate.compareTo(startDate) >= 0 && publishDate.compareTo(endDate) <= 0;
     }
 
     /**
