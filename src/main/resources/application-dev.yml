@@ -16,6 +16,17 @@ spring:
       maximum-pool-size: 10
       minimum-idle: 5
       connection-timeout: 30000
+  mail:
+    host: smtp.qq.com
+    port: 587
+    username: 1150128380@qq.com
+    password: nmcwlejldlsmiffb
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 # DeepSeek AI配置
 deepseek:
@@ -34,3 +45,12 @@ deepseek:
     timeout: 30000
     # 是否启用
     enabled: true
+
+# 定时任务配置
+schedule:
+  task:
+    cron: 0 0 22 * * ?
+    to: tanyong28@h-partners.com
+    subject: 每日新闻导出报告
+    mail:
+      from: 1150128380@qq.com
