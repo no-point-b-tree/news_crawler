@@ -4,12 +4,14 @@ import com.archer.task.config.ScheduleTaskProperties;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.time.DateFormatUtils;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Date;
 
 @Slf4j
 @Service
@@ -25,7 +27,7 @@ public class MailService {
             String to = scheduleTaskProperties.getTo();
             String subject = scheduleTaskProperties.getSubject();
             String from = scheduleTaskProperties.getMail().getFrom();
-
+            subject = subject + DateFormatUtils.format(new Date(), "yyyyMMdd");
             if (to == null || to.isBlank()) {
                 log.warn("邮件接收人未配置，跳过邮件发送");
                 return;

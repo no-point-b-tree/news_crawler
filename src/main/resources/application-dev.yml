@@ -51,6 +51,6 @@ schedule:
   task:
     cron: 0 0 22 * * ?
     to: tanyong28@h-partners.com
-    subject: 每日新闻导出报告
+    subject: 每日报告
     mail:
       from: 1150128380@qq.com

@@ -64,11 +64,6 @@ public class SingleNewsTaskService implements Runnable {
             // 创建URL处理日志记录
             taskUrlLog = createTaskUrlLog(newsLink.getUrl(), taskId);
 
-            if (newsMapper.getCountByUrl(newsLink.getUrl()) > 0) {
-                // 如果URL已经有新闻，记录为成功但新闻数量为0
-                updateTaskUrlLog(taskUrlLog, 0, "SUCCESS", "URL已有新闻记录");
-                return;
-            }
 
             String lang = newsLink.getLang();
             Locale locale = new Locale(lang);
@@ -80,6 +75,10 @@ public class SingleNewsTaskService implements Runnable {
                     if (hyperLink.getHref().startsWith("/")) {
                         // 相对路径转绝对路径
                         hyperLink.setHref(UrlUtils.extractBaseUrl(newsLink.getUrl()) + hyperLink.getHref());
+                    }
+                    if (newsMapper.getCountByUrl(hyperLink.getHref()) > 0) {
+                        // 如果URL已经有新闻
+                        continue;
                     }
                     Article article = latestSpiderTaskService.getArticleContent(hyperLink.getHref());
                     article.setPublishDate(hyperLink.getDate());
