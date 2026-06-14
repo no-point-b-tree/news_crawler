@@ -10,6 +10,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Date;
 
 @Slf4j
@@ -25,11 +27,11 @@ public class ScheduleTaskService {
 
     private final ScheduleTaskProperties scheduleTaskProperties;
 
-    @Scheduled(cron = "${schedule.task.cron:0 0 22 * * ?}")
+    @Scheduled(cron = "${schedule.task.cron:0 10 23 * * ?}")
     public void executeDailyTask() {
         log.info("定时任务开始执行");
 
-        Date now = new Date();
+        Date now = Date.from(LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant());
         Date yesterday = org.apache.commons.lang3.time.DateUtils.addDays(now, -1);
 
         taskService.startTask(yesterday, now);

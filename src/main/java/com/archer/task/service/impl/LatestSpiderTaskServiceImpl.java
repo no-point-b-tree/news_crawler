@@ -99,7 +99,10 @@ public class LatestSpiderTaskServiceImpl implements LatestSpiderTaskService {
         String headlessStr = properties.getProperty("headless", "false");
         boolean headless = Boolean.parseBoolean(headlessStr);
         options.setHeadless(headless);
-        return playwright.chromium().launch(options);
+        Browser browser = playwright.chromium().launch(options);
+        BrowserContext context = browser.newContext(new Browser.NewContextOptions());
+        context.setDefaultNavigationTimeout(60000);
+        return browser;
     }
 
     @Override
@@ -426,7 +429,7 @@ public class LatestSpiderTaskServiceImpl implements LatestSpiderTaskService {
 
         try (Browser browser = getBrowser(); Page page = browser.newPage()) {
             page.setViewportSize(1920, 1080);
-            page.navigate(articleUrl, new Page.NavigateOptions());
+            page.navigate(articleUrl);
             page.waitForLoadState(LoadState.DOMCONTENTLOADED);
             String title = page.title();
             article.setUrl(articleUrl);

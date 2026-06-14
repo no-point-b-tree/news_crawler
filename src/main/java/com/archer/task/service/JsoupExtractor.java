@@ -12,12 +12,14 @@ import com.archer.task.entity.Hyperlink;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.*;
 
 @Slf4j
 public class JsoupExtractor {
 
-    public static List<String> MATCH_RULE_LIST = Arrays.asList("\\d+小时前", "\\d+分钟前", "\\d+\\s+mins?\\s+ago", "\\d+\\s+hours?\\s+ago","\\d+\\s+hrs?\\s+ago");
+    public static List<String> MATCH_RULE_LIST = Arrays.asList("\\d+小时前", "\\d+分钟前", "\\d+\\s+mins?\\s+ago", "\\d+\\s+hours?\\s+ago", "\\d+\\s+hrs?\\s+ago");
 
     public static final boolean LOOK_ALL_LINKS = false;
 
@@ -50,8 +52,8 @@ public class JsoupExtractor {
                 for (Element itemElement : groupSelectorElements) {
                     // 每个卡片的元素 查询一个卡片下的超链接和日期
                     Element link = itemElement.select(cssSelectorLinkRelation.getHyperLinkCssSelector()).first();
-                    Element date = itemElement.select(cssSelectorLinkRelation.getDateCssSelector()).first();
-                    if (link != null && date != null) {
+                    Elements date = itemElement.select(cssSelectorLinkRelation.getDateCssSelector());
+                    if (link != null) {
                         String href = link.attr("href");
                         if (!hrefSet.contains(href)) {
                             String text = link.text();
@@ -60,11 +62,12 @@ public class JsoupExtractor {
                             hyperlink.setContent(text);
                             try {
                                 // 如果自定义规则解析失败或没有自定义规则，尝试通用规则
-                                String dateStr = date.ownText().trim();
+                                String dateStr = getDateStr(date);
                                 if (hyperlink.getDate() == null) {
                                     for (String rule : MATCH_RULE_LIST) {
                                         if (dateStr.matches(rule)) {
-                                            hyperlink.setDate(new Date());
+                                            Date now = Date.from(LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant());
+                                            hyperlink.setDate(now);
                                             break;
                                         }
                                     }
@@ -74,6 +77,13 @@ public class JsoupExtractor {
                                 if (datePattern != null && !datePattern.trim().isEmpty() && hyperlink.getDate() == null) {
                                     try {
                                         Date publishDate = DateUtils.parseDate(dateStr, locale, datePattern);
+                                        Calendar calendar = Calendar.getInstance();
+                                        calendar.setTime(publishDate);
+                                        int year = calendar.get(Calendar.YEAR);
+                                        if (year == 1970) {
+                                            calendar.set(Calendar.YEAR, LocalDate.now().getYear());
+                                        }
+                                        publishDate = calendar.getTime();
                                         hyperlink.setDate(publishDate);
                                     } catch (Exception e) {
                                         log.warn("使用自定义日期模式解析失败: {}, pattern: {}", dateStr, datePattern);
@@ -111,6 +121,14 @@ public class JsoupExtractor {
             publishDate = new Date();
         }
         return publishDate.compareTo(startDate) >= 0 && publishDate.compareTo(endDate) <= 0;
+    }
+
+    public static String getDateStr(Elements elements) {
+        StringBuilder builder = new StringBuilder();
+        for (Element element : elements) {
+            builder.append(element.ownText().trim()).append(" ");
+        }
+        return builder.toString().trim();
     }
 
 }

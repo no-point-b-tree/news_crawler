@@ -136,7 +136,7 @@ public class TaskServiceImpl implements TaskService {
                 if ("RSS".equalsIgnoreCase(taskType)) {
                     filteredNewsLinks = new ArrayList<>(); // 只执行RSS任务
                 } else if ("NEWS".equalsIgnoreCase(taskType)) {
-                    filteredRssLinkList = new ArrayList<String>(); // 只执行新闻任务
+                    filteredRssLinkList = new ArrayList<>(); // 只执行新闻任务
                 }
             }
 

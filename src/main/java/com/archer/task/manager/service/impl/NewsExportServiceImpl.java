@@ -23,6 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.TimeZone;
 import java.util.stream.Collectors;
 
 /**
@@ -42,6 +43,10 @@ public class NewsExportServiceImpl implements NewsExportService {
 
         // 基本条件：未删除
         wrapper.eq("is_delete", "N");
+
+        // 过滤 tikaContent 不为空的数据
+        wrapper.isNotNull("tika_content");
+        wrapper.ne("tika_content", "");
 
         // 状态筛选
         if (request.getOnlyRelevant() != null && request.getOnlyRelevant()) {
@@ -96,11 +101,12 @@ public class NewsExportServiceImpl implements NewsExportService {
         List<NewsExportVO> data = getExportData(request);
 
         try {
-            // 配置ObjectMapper以美化JSON输出
+            // 配置ObjectMapper以美化JSON输出，设置东八区时区
             ObjectMapper mapper = new ObjectMapper();
             mapper.registerModule(new JavaTimeModule());
             mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
             mapper.enable(SerializationFeature.INDENT_OUTPUT);
+            mapper.setTimeZone(TimeZone.getTimeZone("Asia/Shanghai"));
 
             // 创建导出结果对象
             ExportResult exportResult = new ExportResult();
@@ -108,7 +114,7 @@ public class NewsExportServiceImpl implements NewsExportService {
             exportResult.setTotalCount(data.size());
             exportResult.setData(data);
             exportResult.setRequest(request);
-
+            request.setStartTime(request.getEndTime());
             return mapper.writeValueAsString(exportResult);
         } catch (JsonProcessingException e) {
             log.error("JSON导出失败", e);
@@ -168,7 +174,11 @@ public class NewsExportServiceImpl implements NewsExportService {
         vo.setTikaContent(news.getTikaContent());
         vo.setChineseContent(news.getChineseContent());
         vo.setPublishTime(news.getPublishTime());
-        vo.setSourceType(news.getSource());
+        if (news.getSource().equals("news")) {
+            vo.setSourceType("hyperlink");
+        } else {
+            vo.setSourceType(news.getSource());
+        }
         vo.setUrl(news.getUrl());
         vo.setSourceUrl(news.getSourceUrl());
         vo.setStatus(news.getStatus());
