@@ -62,10 +62,11 @@ public class SingleNewsTaskService implements Runnable {
         try {
             // 创建URL处理日志记录
             taskUrlLog = createTaskUrlLog(newsLink.getUrl(), taskId);
-
-
             String lang = newsLink.getLang();
             Locale locale = new Locale(lang);
+            if (cssSelectorLinkRelationList.isEmpty()) {
+                return;
+            }
             Article newsPageContent = latestSpiderTaskService.getArticleContent(newsLink.getUrl());
             List<Hyperlink> hyperLinks = JsoupExtractor.extractor(newsPageContent.getContent(), cssSelectorLinkRelationList, locale);
 
@@ -86,7 +87,6 @@ public class SingleNewsTaskService implements Runnable {
                     newsList.add(news);
                 }
             }
-
             // 更新URL处理日志
             if (newsList.isEmpty()) {
                 updateTaskUrlLog(taskUrlLog, 0, "NO_NEWS", "未找到符合条件的新闻");
