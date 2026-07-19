@@ -46,10 +46,10 @@ deepseek:
     # 是否启用
     enabled: true
 
-# 定时任务配置
+# 定时任务配置 
 schedule:
   task:
-    cron: 0 31 0 * * ?
+    cron: 0 50 23 * * ?
     to: tanyong28@h-partners.com
     subject: 每日报告
     mail:

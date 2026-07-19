@@ -1,6 +1,7 @@
 package com.archer.task.service;
 
 import com.archer.task.entity.CssSelectorLinkRelation;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.DateUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -52,7 +53,11 @@ public class JsoupExtractor {
                 for (Element itemElement : groupSelectorElements) {
                     // 每个卡片的元素 查询一个卡片下的超链接和日期
                     Element link = itemElement.select(cssSelectorLinkRelation.getHyperLinkCssSelector()).first();
-                    Elements date = itemElement.select(cssSelectorLinkRelation.getDateCssSelector());
+                    Elements date = null;
+                    if (StringUtils.isNotBlank(cssSelectorLinkRelation.getDateCssSelector())) {
+                        // 没有日期选择器 说明全选
+                        date = itemElement.select(cssSelectorLinkRelation.getDateCssSelector());
+                    }
                     if (link != null) {
                         String href = link.attr("href");
                         if (!hrefSet.contains(href)) {
@@ -124,6 +129,9 @@ public class JsoupExtractor {
     }
 
     public static String getDateStr(Elements elements) {
+        if (elements == null) {
+            return "1 hour ago";
+        }
         StringBuilder builder = new StringBuilder();
         for (Element element : elements) {
             builder.append(element.ownText().trim()).append(" ");

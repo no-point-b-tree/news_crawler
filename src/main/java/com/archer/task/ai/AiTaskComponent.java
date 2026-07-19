@@ -8,16 +8,16 @@ import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
-import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
+import org.apache.commons.lang3.time.DateUtils;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * AI组件来处理
@@ -72,6 +72,13 @@ public class AiTaskComponent {
                 }
                 update.set("summary", node.get("summary").asText());
                 update.set("chinese_content", node.get("chineseContent").asText());
+                String publishDate = node.get("publishDate").asText();
+                if (StringUtils.isNotBlank(publishDate) && news.getPublishTime() == null) {
+                    update.set("publish_time", DateUtils.parseDate(publishDate, "yyyy-MM-dd"));
+                }
+                if (news.getPublishTime() == null) {
+                    update.set("publish_time", new Date());
+                }
                 newsMapper.update(update);
             } catch (Exception e) {
                 log.error("AI处理失败, 新闻ID:{}", news.getId());
