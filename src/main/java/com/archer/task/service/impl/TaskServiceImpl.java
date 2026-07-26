@@ -50,6 +50,9 @@ public class TaskServiceImpl implements TaskService {
     @Resource
     private TaskUrlLogMapper taskUrlLogMapper;
 
+    @Resource
+    private WebAccessLogMapper webAccessLogMapper;
+
     @Value("${spring.profiles.active}")
     private String active;
 
@@ -87,7 +90,7 @@ public class TaskServiceImpl implements TaskService {
             }
             for (NewsLink newsLink : newsLinks) {
                 List<CssSelectorLinkRelation> cssSelectors = cssSelectorLinkRelationService.findByUrl(newsLink.getUrl());
-                SingleNewsTaskService task = new SingleNewsTaskService(newsLink, LatestSpiderTaskServiceImpl.getInstance(active), cssSelectors, newsMapper, taskLog.getId(), countDownLatch, startDate, current, aiTaskComponent, taskUrlLogMapper);
+                SingleNewsTaskService task = new SingleNewsTaskService(newsLink, LatestSpiderTaskServiceImpl.getInstance(active), cssSelectors, newsMapper, taskLog.getId(), countDownLatch, startDate, current, aiTaskComponent, taskUrlLogMapper, webAccessLogMapper);
                 threadPool.execute(task);
             }
             countDownLatch.await();
@@ -150,7 +153,7 @@ public class TaskServiceImpl implements TaskService {
 
             for (NewsLink newsLink : filteredNewsLinks) {
                 List<CssSelectorLinkRelation> cssSelectors = cssSelectorLinkRelationService.findByUrl(newsLink.getUrl());
-                SingleNewsTaskService task = new SingleNewsTaskService(newsLink, LatestSpiderTaskServiceImpl.getInstance(active), cssSelectors, newsMapper, taskLog.getId(), countDownLatch, startDate, endDate, aiTaskComponent, taskUrlLogMapper);
+                SingleNewsTaskService task = new SingleNewsTaskService(newsLink, LatestSpiderTaskServiceImpl.getInstance(active), cssSelectors, newsMapper, taskLog.getId(), countDownLatch, startDate, endDate, aiTaskComponent, taskUrlLogMapper, webAccessLogMapper);
                 threadPool.execute(task);
             }
 

@@ -48,6 +48,22 @@ public class JsoupExtractor {
         }
         if (cssSelectorList != null && !cssSelectorList.isEmpty()) {
             for (CssSelectorLinkRelation cssSelectorLinkRelation : cssSelectorList) {
+                if (StringUtils.isBlank(cssSelectorLinkRelation.getCssSelectorGroup())) {
+                    // 没有过滤器组的
+                    Elements linkList = doc.select(cssSelectorLinkRelation.getHyperLinkCssSelector());
+                    for (Element link : linkList) {
+                        String href = link.attr("href");
+                        if (!hrefSet.contains(href)) {
+                            String text = link.text();
+                            Hyperlink hyperlink = new Hyperlink();
+                            hyperlink.setHref(href);
+                            hyperlink.setContent(text);
+                            hrefSet.add(hyperlink.getHref());
+                            hyperlinkListAll.add(hyperlink);
+                        }
+                    }
+                    continue;
+                }
                 String groupSelector = cssSelectorLinkRelation.getCssSelectorGroup();
                 Elements groupSelectorElements = doc.select(groupSelector);
                 for (Element itemElement : groupSelectorElements) {

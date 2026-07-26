@@ -5,6 +5,7 @@ import com.archer.task.constant.NewsStatusEnum;
 import com.archer.task.entity.*;
 import com.archer.task.mapper.NewsMapper;
 import com.archer.task.mapper.TaskUrlLogMapper;
+import com.archer.task.mapper.WebAccessLogMapper;
 import com.archer.task.service.impl.LatestSpiderTaskServiceImpl;
 import com.archer.task.util.TikaUtil;
 import com.archer.task.util.UrlUtils;
@@ -42,7 +43,9 @@ public class SingleNewsTaskService implements Runnable {
 
     private final TaskUrlLogMapper taskUrlLogMapper;
 
-    public SingleNewsTaskService(NewsLink newsLink, LatestSpiderTaskServiceImpl latestSpiderTaskService, List<CssSelectorLinkRelation> cssSelectorLinkRelationList, NewsMapper newsMapper, Long taskId, CountDownLatch countDownLatch, Date startDate, Date endDate, AiTaskComponent aiTaskComponent, TaskUrlLogMapper taskUrlLogMapper) {
+    private final WebAccessLogMapper webAccessLogMapper;
+
+    public SingleNewsTaskService(NewsLink newsLink, LatestSpiderTaskServiceImpl latestSpiderTaskService, List<CssSelectorLinkRelation> cssSelectorLinkRelationList, NewsMapper newsMapper, Long taskId, CountDownLatch countDownLatch, Date startDate, Date endDate, AiTaskComponent aiTaskComponent, TaskUrlLogMapper taskUrlLogMapper, WebAccessLogMapper webAccessLogMapper) {
         this.newsLink = newsLink;
         this.latestSpiderTaskService = latestSpiderTaskService;
         this.newsMapper = newsMapper;
@@ -53,6 +56,7 @@ public class SingleNewsTaskService implements Runnable {
         this.endDate = endDate;
         this.aiTaskComponent = aiTaskComponent;
         this.taskUrlLogMapper = taskUrlLogMapper;
+        this.webAccessLogMapper = webAccessLogMapper;
     }
 
     @Override
@@ -68,6 +72,7 @@ public class SingleNewsTaskService implements Runnable {
                 return;
             }
             Article newsPageContent = latestSpiderTaskService.getArticleContent(newsLink.getUrl());
+            saveWebAccessLog(newsLink.getUrl(), newsPageContent != null ? newsPageContent.getContent() : null, "index");
             List<Hyperlink> hyperLinks = JsoupExtractor.extractor(newsPageContent.getContent(), cssSelectorLinkRelationList, locale);
 
             for (Hyperlink hyperLink : hyperLinks) {
@@ -95,6 +100,7 @@ public class SingleNewsTaskService implements Runnable {
             }
         } catch (Exception e) {
             log.error("新闻任务异常", e);
+            saveWebAccessLog(newsLink.getUrl(), e, "index_exception");
             // 记录错误信息
             if (taskUrlLog != null) {
                 updateTaskUrlLog(taskUrlLog, 0, "ERROR", e.getMessage());
@@ -179,4 +185,34 @@ public class SingleNewsTaskService implements Runnable {
         return news;
     }
 
+    private void saveWebAccessLog(String url, String content, String webIndexType) {
+        try {
+            WebAccessLog log = new WebAccessLog();
+            log.setUrl(url);
+            log.setContent(content);
+            log.setWebIndexType(webIndexType);
+            log.setIsDelete("N");
+            log.setCreateTime(new Date());
+            log.setUpdateTime(new Date());
+            webAccessLogMapper.insert(log);
+        } catch (Exception e) {
+            log.error("保存web访问日志失败", e);
+        }
+    }
+
+    private void saveWebAccessLog(String url, Exception ex, String webIndexType) {
+        try {
+            WebAccessLog log = new WebAccessLog();
+            log.setUrl(url);
+            log.setContent(org.apache.commons.lang3.exception.ExceptionUtils.getStackTrace(ex));
+            log.setWebIndexType(webIndexType);
+            log.setIsDelete("N");
+            log.setCreateTime(new Date());
+            log.setUpdateTime(new Date());
+            webAccessLogMapper.insert(log);
+        } catch (Exception e) {
+            log.error("保存web访问日志失败", e);
+        }
+    }
 }
+

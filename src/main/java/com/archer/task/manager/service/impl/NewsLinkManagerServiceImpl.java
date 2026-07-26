@@ -4,11 +4,7 @@ import com.archer.task.ai.AiTaskComponent;
 import com.archer.task.constant.TaskStatusEnum;
 import com.archer.task.entity.*;
 import com.archer.task.manager.service.NewsLinkManagerService;
-import com.archer.task.mapper.CssSelectorLinkRelationMapper;
-import com.archer.task.mapper.NewsLinkMapper;
-import com.archer.task.mapper.NewsMapper;
-import com.archer.task.mapper.TaskLogMapper;
-import com.archer.task.mapper.TaskUrlLogMapper;
+import com.archer.task.mapper.*;
 import com.archer.task.service.CssSelectorLinkRelationService;
 import com.archer.task.service.JsoupExtractor;
 import com.archer.task.service.SingleNewsTaskService;
@@ -59,6 +55,9 @@ public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, News
 
     @Resource
     private TaskUrlLogMapper taskUrlLogMapper;
+
+    @Resource
+    private WebAccessLogMapper webAccessLogMapper;
 
     @Value("${spring.profiles.active}")
     private String active;
@@ -253,7 +252,7 @@ public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, News
             List<CssSelectorLinkRelation> cssSelectors = cssSelectorLinkRelationService.findByUrl(newsLink.getUrl());
             CountDownLatch aiCl = new CountDownLatch(1);
             aiTaskComponent.setTaskCountDown(taskLog.getId(), aiCl);
-            SingleNewsTaskService singleNewsTaskService = new SingleNewsTaskService(newsLink, LatestSpiderTaskServiceImpl.getInstance(active), cssSelectors, newsMapper, taskId, new CountDownLatch(1), startDate, endDate, aiTaskComponent, taskUrlLogMapper);
+            SingleNewsTaskService singleNewsTaskService = new SingleNewsTaskService(newsLink, LatestSpiderTaskServiceImpl.getInstance(active), cssSelectors, newsMapper, taskId, new CountDownLatch(1), startDate, endDate, aiTaskComponent, taskUrlLogMapper, webAccessLogMapper);
             new Thread(singleNewsTaskService).start();
             new Thread(() -> {
                 try {

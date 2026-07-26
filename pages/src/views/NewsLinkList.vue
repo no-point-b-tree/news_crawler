@@ -653,8 +653,7 @@ const cssSelectorDialog = reactive({
   detectedDateFormat: '',
   formRules: {
     cssSelectorGroup: [
-      { required: true, message: '请输入CSS选择器组', trigger: 'blur' },
-      { min: 1, max: 500, message: '长度在 1 到 500 个字符', trigger: 'blur' }
+      { max: 500, message: '长度不能超过 500 个字符', trigger: 'blur' }
     ],
     dateCssSelector: [
       { max: 500, message: '长度不能超过 500 个字符', trigger: 'blur' }
