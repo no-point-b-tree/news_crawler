@@ -7,12 +7,15 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Date;
-import java.util.List;
+import java.io.ByteArrayOutputStream;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -124,5 +127,123 @@ public class CssSelectorLinkRelationServiceImpl extends ServiceImpl<CssSelectorL
                 .filter(StringUtils::hasText)
                 .distinct()
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> batchImport(MultipartFile file) {
+        Map<String, Object> result = new HashMap<>();
+        int successCount = 0;
+        int skipCount = 0;
+        List<String> errors = new ArrayList<>();
+
+        try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
+            Sheet sheet = workbook.getSheetAt(0);
+            DataFormatter formatter = new DataFormatter();
+
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+                Row row = sheet.getRow(i);
+                if (row == null) continue;
+
+                String url = getCellValue(row, 0, formatter);
+                String cssSelectorGroup = getCellValue(row, 1, formatter);
+                String dateCssSelector = getCellValue(row, 2, formatter);
+                String hyperLinkCssSelector = getCellValue(row, 3, formatter);
+                String datePattern = getCellValue(row, 4, formatter);
+                String enabled = getCellValue(row, 5, formatter);
+
+                if (url == null || url.isBlank()) {
+                    skipCount++;
+                    continue;
+                }
+                url = url.trim();
+                cssSelectorGroup = cssSelectorGroup != null ? cssSelectorGroup.trim() : "";
+                dateCssSelector = dateCssSelector != null ? dateCssSelector.trim() : null;
+                hyperLinkCssSelector = hyperLinkCssSelector != null ? hyperLinkCssSelector.trim() : null;
+                datePattern = datePattern != null ? datePattern.trim() : null;
+                enabled = (enabled != null && !enabled.isBlank()) ? enabled.trim() : "ON";
+
+                try {
+                    CssSelectorLinkRelation existing = null;
+                    if (!cssSelectorGroup.isEmpty()) {
+                        LambdaQueryWrapper<CssSelectorLinkRelation> queryWrapper = new LambdaQueryWrapper<>();
+                        queryWrapper.eq(CssSelectorLinkRelation::getUrl, url)
+                                .eq(CssSelectorLinkRelation::getCssSelectorGroup, cssSelectorGroup)
+                                .eq(CssSelectorLinkRelation::getIsDelete, "N");
+                        existing = cssSelectorLinkRelationMapper.selectOne(queryWrapper);
+                    }
+
+                    if (existing != null) {
+                        existing.setDateCssSelector(dateCssSelector);
+                        existing.setHyperLinkCssSelector(hyperLinkCssSelector);
+                        existing.setDatePattern(datePattern);
+                        existing.setEnabled(enabled);
+                        existing.setUpdateTime(new Date());
+                        cssSelectorLinkRelationMapper.updateById(existing);
+                    } else {
+                        CssSelectorLinkRelation relation = new CssSelectorLinkRelation();
+                        relation.setUrl(url);
+                        relation.setCssSelectorGroup(cssSelectorGroup);
+                        relation.setDateCssSelector(dateCssSelector);
+                        relation.setHyperLinkCssSelector(hyperLinkCssSelector);
+                        relation.setDatePattern(datePattern);
+                        relation.setEnabled(enabled);
+                        relation.setIsDelete("N");
+                        relation.setCreateTime(new Date());
+                        relation.setUpdateTime(new Date());
+                        cssSelectorLinkRelationMapper.insert(relation);
+                    }
+                    successCount++;
+                } catch (Exception e) {
+                    errors.add("第" + (i + 1) + "行: " + e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            log.error("CSS选择器批量导入失败", e);
+            result.put("success", false);
+            result.put("message", "文件解析失败: " + e.getMessage());
+            return result;
+        }
+
+        result.put("success", true);
+        result.put("successCount", successCount);
+        result.put("skipCount", skipCount);
+        result.put("errors", errors);
+        return result;
+    }
+
+    @Override
+    public byte[] downloadTemplate() {
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet("CSS选择器");
+
+            CellStyle headerStyle = workbook.createCellStyle();
+            Font headerFont = workbook.createFont();
+            headerFont.setBold(true);
+            headerStyle.setFont(headerFont);
+
+            String[] headers = {"URL（必填）", "CSS选择器组", "日期选择器", "超链接选择器", "日期匹配规则", "启用状态（ON/OFF）"};
+            Row headerRow = sheet.createRow(0);
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(headers[i]);
+                cell.setCellStyle(headerStyle);
+                sheet.setColumnWidth(i, 5000);
+            }
+
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            workbook.write(bos);
+            return bos.toByteArray();
+        } catch (Exception e) {
+            log.error("生成CSS选择器模板失败", e);
+            return new byte[0];
+        }
+    }
+
+    private String getCellValue(Row row, int colIndex, DataFormatter formatter) {
+        Cell cell = row.getCell(colIndex);
+        if (cell == null) return null;
+        String value = formatter.formatCellValue(cell);
+        return value != null ? value.trim() : null;
     }
 }

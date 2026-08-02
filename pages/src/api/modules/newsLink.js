@@ -132,5 +132,47 @@ export const newsLinkApi = {
       url: `/manager/news-links/css-selectors/${id}`,
       method: 'delete'
     });
+  },
+
+  importNewsLinks(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    return request({
+      url: '/manager/news-links/import',
+      method: 'post',
+      data: formData,
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+  },
+
+  downloadTemplate() {
+    return request({
+      url: '/manager/news-links/template',
+      method: 'get',
+      responseType: 'blob'
+    });
+  },
+
+  importCssSelectors(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    return request({
+      url: '/manager/news-links/css-selectors/import',
+      method: 'post',
+      data: formData,
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+  },
+
+  downloadCssSelectorTemplate() {
+    return request({
+      url: '/manager/news-links/css-selectors/template',
+      method: 'get',
+      responseType: 'blob'
+    });
   }
 };

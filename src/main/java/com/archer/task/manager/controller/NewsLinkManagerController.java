@@ -11,12 +11,19 @@ import com.archer.task.manager.dto.PageRequest;
 import com.archer.task.manager.dto.TaskLogPageByUrlRequest;
 import com.archer.task.manager.dto.UrlRequest;
 import com.archer.task.manager.service.NewsLinkManagerService;
+import com.archer.task.service.CssSelectorLinkRelationService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/manager/news-links")
@@ -24,6 +31,8 @@ import java.util.List;
 public class NewsLinkManagerController {
 
     private final NewsLinkManagerService newsLinkManagerService;
+
+    private final CssSelectorLinkRelationService cssSelectorLinkRelationService;
 
     @PostMapping("/page")
     public ResponseEntity<Page<NewsLink>> pageNewsLinks(@RequestBody NewsLinkPageRequest request) {
@@ -143,5 +152,37 @@ public class NewsLinkManagerController {
     public ResponseEntity<Boolean> deleteCssSelector(@PathVariable Long id) {
         boolean result = newsLinkManagerService.deleteCssSelector(id);
         return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/import")
+    public ResponseEntity<Map<String, Object>> batchImportNewsLinks(@RequestParam("file") MultipartFile file) {
+        Map<String, Object> result = newsLinkManagerService.batchImportNewsLinks(file);
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/template")
+    public ResponseEntity<byte[]> downloadTemplate() {
+        byte[] templateBytes = newsLinkManagerService.downloadTemplate();
+        String fileName = URLEncoder.encode("新闻链接导入模板.xlsx", StandardCharsets.UTF_8);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + fileName)
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(templateBytes);
+    }
+
+    @PostMapping("/css-selectors/import")
+    public ResponseEntity<Map<String, Object>> batchImportCssSelectors(@RequestParam("file") MultipartFile file) {
+        Map<String, Object> result = cssSelectorLinkRelationService.batchImport(file);
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/css-selectors/template")
+    public ResponseEntity<byte[]> downloadCssSelectorTemplate() {
+        byte[] templateBytes = cssSelectorLinkRelationService.downloadTemplate();
+        String fileName = URLEncoder.encode("CSS选择器导入模板.xlsx", StandardCharsets.UTF_8);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + fileName)
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(templateBytes);
     }
 }

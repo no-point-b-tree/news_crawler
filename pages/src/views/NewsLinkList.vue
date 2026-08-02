@@ -67,9 +67,11 @@
                <div class="action-header">
                  <div class="action-buttons-left">
                    <el-button type="primary" @click="handleAdd">新增</el-button>
-                   <el-button type="danger" @click="handleBatchDelete" :disabled="selection.length === 0">
-                     批量删除
-                   </el-button>
+                    <el-button type="danger" @click="handleBatchDelete" :disabled="selection.length === 0">
+                      批量删除
+                    </el-button>
+                    <el-button type="success" @click="handleShowImport">批量导入</el-button>
+                    <el-button type="success" @click="handleShowCssSelectorImport">批量导入CSS</el-button>
 
                  </div>
                <div class="css-stats" v-if="tableData.length > 0">
@@ -606,13 +608,127 @@
           </span>
         </template>
       </el-dialog>
+
+      <el-dialog
+        v-model="importDialog.visible"
+        title="批量导入新闻链接"
+        width="550px"
+        @close="handleImportClose"
+      >
+        <div style="margin-bottom: 16px;">
+          <el-link type="primary" @click="handleDownloadTemplate">
+            <el-icon style="vertical-align: middle;"><Download/></el-icon> 下载导入模板
+          </el-link>
+        </div>
+
+        <el-upload
+          ref="uploadRef"
+          drag
+          :auto-upload="false"
+          :limit="1"
+          accept=".xlsx,.xls"
+          :on-change="handleFileChange"
+          :on-remove="handleFileRemove"
+          :file-list="importDialog.fileList"
+        >
+          <el-icon class="el-icon--upload"><UploadFilled/></el-icon>
+          <div class="el-upload__text">
+            将Excel文件拖到这里，或<em>点击上传</em>
+          </div>
+          <template #tip>
+            <div class="el-upload__tip">
+              仅支持 .xlsx / .xls 格式，列顺序为：URL、名称、语言
+            </div>
+          </template>
+        </el-upload>
+
+        <div v-if="importDialog.result" style="margin-top: 16px;">
+          <el-alert
+            :title="'导入完成：成功 ' + importDialog.result.successCount + ' 条，跳过 ' + importDialog.result.skipCount + ' 行'"
+            :type="(importDialog.result.errors && importDialog.result.errors.length > 0) ? 'warning' : 'success'"
+            :closable="false"
+            show-icon
+          />
+          <div v-if="importDialog.result.errors && importDialog.result.errors.length > 0" style="margin-top: 8px; max-height: 200px; overflow-y: auto;">
+            <div v-for="(err, idx) in importDialog.result.errors" :key="idx" style="color: #e6a23c; font-size: 13px;">
+              {{ err }}
+            </div>
+          </div>
+        </div>
+
+        <template #footer>
+          <span class="dialog-footer">
+            <el-button @click="handleImportClose">关闭</el-button>
+            <el-button type="primary" @click="handleImportSubmit" :loading="importDialog.loading" :disabled="importDialog.fileList.length === 0">
+              开始导入
+            </el-button>
+          </span>
+        </template>
+      </el-dialog>
+
+      <el-dialog
+        v-model="cssImportDialog.visible"
+        title="批量导入CSS选择器"
+        width="550px"
+        @close="handleCssImportClose"
+      >
+        <div style="margin-bottom: 16px;">
+          <el-link type="primary" @click="handleDownloadCssSelectorTemplate">
+            <el-icon style="vertical-align: middle;"><Download/></el-icon> 下载导入模板
+          </el-link>
+        </div>
+
+        <el-upload
+          ref="cssUploadRef"
+          drag
+          :auto-upload="false"
+          :limit="1"
+          accept=".xlsx,.xls"
+          :on-change="handleCssImportFileChange"
+          :on-remove="handleCssImportFileRemove"
+          :file-list="cssImportDialog.fileList"
+        >
+          <el-icon class="el-icon--upload"><UploadFilled/></el-icon>
+          <div class="el-upload__text">
+            将Excel文件拖到这里，或<em>点击上传</em>
+          </div>
+          <template #tip>
+            <div class="el-upload__tip">
+              仅支持 .xlsx / .xls 格式，列顺序为：URL、CSS选择器组、日期选择器、超链接选择器、日期匹配规则、启用状态
+            </div>
+          </template>
+        </el-upload>
+
+        <div v-if="cssImportDialog.result" style="margin-top: 16px;">
+          <el-alert
+            :title="'导入完成：成功 ' + cssImportDialog.result.successCount + ' 条，跳过 ' + cssImportDialog.result.skipCount + ' 行'"
+            :type="(cssImportDialog.result.errors && cssImportDialog.result.errors.length > 0) ? 'warning' : 'success'"
+            :closable="false"
+            show-icon
+          />
+          <div v-if="cssImportDialog.result.errors && cssImportDialog.result.errors.length > 0" style="margin-top: 8px; max-height: 200px; overflow-y: auto;">
+            <div v-for="(err, idx) in cssImportDialog.result.errors" :key="idx" style="color: #e6a23c; font-size: 13px;">
+              {{ err }}
+            </div>
+          </div>
+        </div>
+
+        <template #footer>
+          <span class="dialog-footer">
+            <el-button @click="handleCssImportClose">关闭</el-button>
+            <el-button type="primary" @click="handleCssImportSubmit" :loading="cssImportDialog.loading" :disabled="cssImportDialog.fileList.length === 0">
+              开始导入
+            </el-button>
+          </span>
+        </template>
+      </el-dialog>
     </div>
   </template>
 
 <script setup>
 import { ref, reactive, onMounted, watch, computed } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { InfoFilled, Warning } from '@element-plus/icons-vue';
+import { InfoFilled, Warning, Download, UploadFilled } from '@element-plus/icons-vue';
 import { newsLinkApi } from '@/api';
 
 const searchParams = reactive({
@@ -746,6 +862,24 @@ const hyperLinkDialog = reactive({
 });
 
 const hyperLinkFormRef = ref();
+
+const importDialog = reactive({
+  visible: false,
+  loading: false,
+  fileList: [],
+  result: null
+});
+
+const uploadRef = ref();
+
+const cssImportDialog = reactive({
+  visible: false,
+  loading: false,
+  fileList: [],
+  result: null
+});
+
+const cssUploadRef = ref();
 
 const formRules = {
   name: [
@@ -1190,6 +1324,123 @@ const handleBatchDelete = async () => {
       ElMessage.error('删除失败');
     }
   }
+};
+
+const handleShowImport = () => {
+  importDialog.visible = true;
+  importDialog.fileList = [];
+  importDialog.result = null;
+};
+
+const handleFileChange = (file) => {
+  importDialog.fileList = [file];
+  importDialog.result = null;
+};
+
+const handleFileRemove = () => {
+  importDialog.fileList = [];
+  importDialog.result = null;
+};
+
+const handleImportSubmit = async () => {
+  if (importDialog.fileList.length === 0) {
+    ElMessage.warning('请先选择文件');
+    return;
+  }
+  importDialog.loading = true;
+  importDialog.result = null;
+  try {
+    const file = importDialog.fileList[0].raw;
+    const res = await newsLinkApi.importNewsLinks(file);
+    importDialog.result = res;
+    if (res.success) {
+      ElMessage.success(`导入完成：成功 ${res.successCount} 条，跳过 ${res.skipCount} 行`);
+      fetchData();
+    } else {
+      ElMessage.error(res.message || '导入失败');
+    }
+  } catch (error) {
+    ElMessage.error('导入失败');
+  } finally {
+    importDialog.loading = false;
+  }
+};
+
+const handleImportClose = () => {
+  importDialog.visible = false;
+  importDialog.fileList = [];
+  importDialog.result = null;
+};
+
+const handleDownloadTemplate = () => {
+  newsLinkApi.downloadTemplate().then(blob => {
+    const url = window.URL.createObjectURL(new Blob([blob]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = '新闻链接导入模板.xlsx';
+    link.click();
+    window.URL.revokeObjectURL(url);
+  }).catch(() => {
+    ElMessage.error('模板下载失败');
+  });
+};
+
+const handleDownloadCssSelectorTemplate = () => {
+  newsLinkApi.downloadCssSelectorTemplate().then(blob => {
+    const url = window.URL.createObjectURL(new Blob([blob]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'CSS选择器导入模板.xlsx';
+    link.click();
+    window.URL.revokeObjectURL(url);
+  }).catch(() => {
+    ElMessage.error('模板下载失败');
+  });
+};
+
+const handleShowCssSelectorImport = () => {
+  cssImportDialog.visible = true;
+  cssImportDialog.fileList = [];
+  cssImportDialog.result = null;
+};
+
+const handleCssImportFileChange = (file) => {
+  cssImportDialog.fileList = [file];
+  cssImportDialog.result = null;
+};
+
+const handleCssImportFileRemove = () => {
+  cssImportDialog.fileList = [];
+  cssImportDialog.result = null;
+};
+
+const handleCssImportSubmit = async () => {
+  if (cssImportDialog.fileList.length === 0) {
+    ElMessage.warning('请先选择文件');
+    return;
+  }
+  cssImportDialog.loading = true;
+  cssImportDialog.result = null;
+  try {
+    const file = cssImportDialog.fileList[0].raw;
+    const res = await newsLinkApi.importCssSelectors(file);
+    cssImportDialog.result = res;
+    if (res.success) {
+      ElMessage.success(`导入完成：成功 ${res.successCount} 条，跳过 ${res.skipCount} 行`);
+    } else {
+      ElMessage.error(res.message || '导入失败');
+    }
+  } catch (error) {
+    ElMessage.error('导入失败');
+  } finally {
+    cssImportDialog.loading = false;
+  }
+};
+
+const handleCssImportClose = () => {
+  cssImportDialog.visible = false;
+  cssImportDialog.fileList = [];
+  cssImportDialog.result = null;
 };
 
 const handleBatchViewNoCss = () => {

@@ -23,7 +23,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
+import java.io.ByteArrayOutputStream;
+import java.net.URL;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
@@ -381,5 +392,124 @@ public class NewsLinkManagerServiceImpl extends ServiceImpl<NewsLinkMapper, News
         relation.setIsDelete("Y");
         relation.setUpdateTime(new Date());
         return cssSelectorLinkRelationMapper.updateById(relation) > 0;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> batchImportNewsLinks(MultipartFile file) {
+        Map<String, Object> result = new HashMap<>();
+        int successCount = 0;
+        int skipCount = 0;
+        List<String> errors = new ArrayList<>();
+
+        try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
+            Sheet sheet = workbook.getSheetAt(0);
+            DataFormatter formatter = new DataFormatter();
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+                Row row = sheet.getRow(i);
+                if (row == null) continue;
+
+                String url = getCellString(row, 0, formatter);
+                String name = getCellString(row, 1, formatter);
+                String lang = getCellString(row, 2, formatter);
+
+                log.debug("导入第{}行: url={}, name={}, lang={}", i + 1, url, name, lang);
+
+                if (url == null || url.trim().isEmpty()) {
+                    skipCount++;
+                    continue;
+                }
+
+                url = url.trim();
+                name = (name != null && !name.trim().isEmpty()) ? name.trim() : null;
+                lang = (lang != null && !lang.trim().isEmpty()) ? lang.trim().toLowerCase() : null;
+
+                try {
+                    NewsLink existing = newsLinkMapper.selectOne(
+                        new LambdaQueryWrapper<NewsLink>()
+                            .eq(NewsLink::getUrl, url)
+                            .eq(NewsLink::getIsDelete, "N")
+                    );
+                    if (existing != null) {
+                        existing.setName(name != null ? name : existing.getName());
+                        existing.setLang(lang != null ? lang : existing.getLang());
+                        existing.setUpdateTime(new Date());
+                        newsLinkMapper.updateById(existing);
+                        successCount++;
+                        continue;
+                    }
+                } catch (Exception e) {
+                    errors.add("第" + (i + 1) + "行: 查询重复时出错 - " + e.getMessage());
+                    continue;
+                }
+
+                NewsLink newsLink = new NewsLink();
+                newsLink.setUrl(url);
+                newsLink.setName(name);
+                newsLink.setLang(lang);
+                newsLink.setIsDelete("N");
+                newsLink.setCreateTime(new Date());
+                newsLink.setUpdateTime(new Date());
+
+                try {
+                    String host = new URL(url).getHost();
+                    newsLink.setDomain(host);
+                } catch (Exception ignored) {
+                }
+
+                try {
+                    newsLinkMapper.insert(newsLink);
+                    successCount++;
+                } catch (Exception e) {
+                    errors.add("第" + (i + 1) + "行: 插入失败 - " + e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            log.error("Excel导入失败", e);
+            result.put("success", false);
+            result.put("message", "文件解析失败: " + e.getMessage());
+            return result;
+        }
+
+        result.put("success", true);
+        result.put("successCount", successCount);
+        result.put("skipCount", skipCount);
+        result.put("errors", errors);
+        return result;
+    }
+
+    @Override
+    public byte[] downloadTemplate() {
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet("新闻链接");
+
+            CellStyle headerStyle = workbook.createCellStyle();
+            Font headerFont = workbook.createFont();
+            headerFont.setBold(true);
+            headerStyle.setFont(headerFont);
+
+            Row headerRow = sheet.createRow(0);
+            String[] headers = {"URL（必填）", "名称（选填）", "语言（选填，如en、zh、fr）"};
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(headers[i]);
+                cell.setCellStyle(headerStyle);
+                sheet.setColumnWidth(i, 6000);
+            }
+
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            workbook.write(bos);
+            return bos.toByteArray();
+        } catch (Exception e) {
+            log.error("生成模板失败", e);
+            return new byte[0];
+        }
+    }
+
+    private String getCellString(Row row, int colIndex, DataFormatter formatter) {
+        Cell cell = row.getCell(colIndex);
+        if (cell == null) return null;
+        String value = formatter.formatCellValue(cell);
+        return value != null ? value.trim() : null;
     }
 }

@@ -4,8 +4,10 @@ import com.archer.task.entity.NewsLink;
 import com.archer.task.entity.TaskLog;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 public interface NewsLinkManagerService extends IService<NewsLink> {
 
@@ -36,4 +38,8 @@ public interface NewsLinkManagerService extends IService<NewsLink> {
     boolean updateCssSelector(Long id, String cssSelectorGroup, String dateCssSelector, String hyperLinkCssSelector, String datePattern, String enabled);
 
     boolean deleteCssSelector(Long id);
+
+    Map<String, Object> batchImportNewsLinks(MultipartFile file);
+
+    byte[] downloadTemplate();
 }

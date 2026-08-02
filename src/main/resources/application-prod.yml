@@ -49,7 +49,7 @@ deepseek:
 # 定时任务配置
 schedule:
   task:
-    cron: 0 0 1 * * ?
+    cron: 0 0 19 * * ?
     to: recipient@example.com
     subject: 每日新闻导出报告
     mail:
