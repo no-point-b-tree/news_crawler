@@ -17,10 +17,10 @@ spring:
       minimum-idle: 5
       connection-timeout: 30000
   mail:
-    host: smtp.example.com
+    host: smtp.qq.com
     port: 587
-    username: your-email@example.com
-    password: your-password
+    username: 1150128380@qq.com
+    password: nmcwlejldlsmiffb
     properties:
       mail:
         smtp:
@@ -49,8 +49,8 @@ deepseek:
 # 定时任务配置
 schedule:
   task:
-    cron: 0 0 19 * * ?
-    to: recipient@example.com
-    subject: 每日新闻导出报告
+    cron: 0 0 20 * * ?
+    to: tanyong28@h-partners.com
+    subject: 每日报告
     mail:
-      from: your-email@example.com
+      from: 1150128380@qq.com
