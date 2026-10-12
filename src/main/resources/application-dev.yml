@@ -49,8 +49,8 @@ deepseek:
 # 定时任务配置 
 schedule:
   task:
-    cron: 0 02 22 * * ?
-    to: tanyong28@h-partners.com
+    cron: 0 10 21 * * ?
+    to: tanyong28@h-partners.com,lijiqun@huawei.com
     subject: 每日报告
     mail:
       from: 1150128380@qq.com

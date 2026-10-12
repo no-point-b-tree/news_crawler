@@ -1,17 +1,16 @@
 package com.archer.task.util;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+
 import org.apache.tika.Tika;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.parser.ParseContext;
 import org.apache.tika.parser.html.HtmlParser;
 import org.apache.tika.sax.BodyContentHandler;
-import org.xml.sax.SAXException;
-
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 
 public class TikaUtil {
 
@@ -54,7 +53,7 @@ public class TikaUtil {
             
             htmlParser.parse(inputStream, handler, metadata, context);
             return handler.toString().trim();
-        } catch (IOException | SAXException | TikaException e) {
+        } catch (Exception e) {
             throw new RuntimeException("Failed to parse HTML content with HTML parser", e);
         }
     }
@@ -80,8 +79,8 @@ public class TikaUtil {
             
             // 转换为紧凑型文本
             return toCompactText(text);
-        } catch (IOException | SAXException | TikaException e) {
-            throw new RuntimeException("Failed to parse HTML content for compact text", e);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to parse HTML content for compact text",e);
         }
     }
 
