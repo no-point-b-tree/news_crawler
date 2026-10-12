@@ -49,7 +49,7 @@ deepseek:
 # 定时任务配置 
 schedule:
   task:
-    cron: 0 10 21 * * ?
+    cron: 0 0 10 * * ?
     to: tanyong28@h-partners.com,lijiqun@huawei.com
     subject: 每日报告
     mail:
